@@ -3,11 +3,13 @@ import gym
 import pygame
 from PIL import Image, ImageTk
 from math import sin, pi
+import pkgutil
 
 from gym_stratego.envs.Army import Army, Icons
 import gym_stratego.envs.explosion
-from gym_stratego.envs.constants import *  # @UnusedWildImport
-from gym_stratego.envs.brains import *  # @UnusedWildImport
+from gym_stratego.envs.constants import *
+from gym_stratego.envs.brains import *
+BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
 
 
 def sigmoid(x):
@@ -117,6 +119,8 @@ class StrategoEnv(gym.Env):
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
 
+        self.unitIcons = Icons(self.tilePix)
+
         grassImage = pygame.image.load("gym_stratego/envs/%s/%s" % (TERRAIN_DIR, LAND_TEXTURE))
         DEFAULT_IMAGE_SIZE = (self.boardWidth * self.tilePix, self.boardWidth * self.tilePix)
         self.grass_image = pygame.transform.scale(grassImage, DEFAULT_IMAGE_SIZE)
@@ -125,9 +129,6 @@ class StrategoEnv(gym.Env):
         DEFAULT_IMAGE_SIZE = (self.tilePix, self.tilePix)
         self.water_image = pygame.transform.scale(waterImage, DEFAULT_IMAGE_SIZE)
 
-        #print("self.boardsize: ", self.boardsize)
-        #print("self.armyHeight: ", self.armyHeight)
-
         self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
         self.redArmy = Army("classical", "Red", self.boardWidth * self.armyHeight)
 
@@ -135,9 +136,23 @@ class StrategoEnv(gym.Env):
         self.WHITE = (200, 200, 200)
 
         pygame.init()
+
+        self.my_font = pygame.font.Font('gym_stratego/envs/fonts/FreeSansBold.ttf', 16)
         self.SCREEN = pygame.display.set_mode((self.boardsize, self.boardsize))
         CLOCK = pygame.time.Clock()
         self.SCREEN.fill(self.BLACK)
+
+        tempBrain = randomBrain.Brain(self, self.redArmy, self.boardWidth)
+        tempBrain.placeArmy(self.armyHeight)
+
+        self.redBrain = 0
+        self.blueBrain = eval("SmartBrain")
+
+        self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
+        self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
+                       "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
+
+        self.brains["Blue"].placeArmy(self.armyHeight)
 
     def observation(self):
         return np.array([self.state[o] for o in self.observations])
@@ -198,20 +213,125 @@ class StrategoEnv(gym.Env):
             ((self.boardWidth % 2 == 0) and (y == self.boardWidth / 2 or y == (self.boardWidth / 2) - 1)):
             return sin(2 * pi * (x + .5) / BOARD_WIDTH * (POOLS + 0.5)) < 0
 
+    def getUnit(self, x, y):
+        return self.redArmy.getUnit(x, y) or self.blueArmy.getUnit(x, y)
+
+    def legalMove(self, unit, x, y):
+        """Check whether a move:
+            - does not end in the water
+            - does not end off-board
+            - is only in one direction
+            - is not farther than one step, for non-scouts
+            - does not jump over obstacles, for scouts
+        """
+
+        if self.isPool(x, y):
+            return False
+
+        (ux, uy) = unit.position
+        dx = abs(ux - x)
+        dy = abs(uy - y)
+
+        if x >= self.boardWidth or y >= self.boardWidth or x < 0 or y < 0:
+            return False
+
+        if not self.started:
+            if y < (self.boardWidth - 4):
+                return False
+
+            return True
+
+        if unit.walkFar:
+            if dx != 0 and dy != 0:
+                if self.diagonal:
+                    if dx != dy:
+                        return False
+                else:
+                    return False
+
+            if (dx + dy) == 0:
+                return False
+
+            if dx > 0 and dy == 0:
+                x0 = min(x, ux)
+                x1 = max(x, ux)
+                for i in range(x0 + 1, x1):
+                    if self.isPool(i, y) or self.getUnit(i, y):
+                        return False
+
+            elif dy > 0 and dx == 0:
+                y0 = min(y, uy)
+                y1 = max(y, uy)
+                for i in range(y0 + 1, y1):
+                    if self.isPool(x, i) or self.getUnit(x, i):
+                        return False
+
+            else:
+                xdir = dx / (x - ux)
+                ydir = dy / (y - uy)
+                distance = abs(x - ux)
+                for i in range(1, distance):
+                    if self.isPool(ux + i * xdir, uy + i * ydir) or self.getUnit(ux + i * xdir, uy + i * ydir):
+                        return False
+        else:
+            s = dx + dy
+            if self.diagonal:
+                if s == 0 or max(dx, dy) > 1:
+                    return False
+            elif s != 1:
+                return False
+
+        return True
+
+    def drawUnit(self, unit, x, y, color=None):
+        """Draw unit tile with correct color and image, 3d border etc"""
+        if color == None:
+            color = RED_PLAYER_COLOR if unit.color == "Red" else BLUE_PLAYER_COLOR
+
+        hilight = SELECTED_RED_PLAYER_COLOR if unit.color == "Red" else SELECTED_BLUE_PLAYER_COLOR
+        shadow = SHADOW_RED_COLOR if unit.color == "Red" else SHADOW_BLUE_COLOR
+
+        #print("unit.name: %s, x: %d, y: %d, unit.color: %s" % (unit.name, x, y, unit.color))
+
+        DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
+        self.SCREEN.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
+
+        if unit.color == "Red":
+            pygame.draw.rect(self.SCREEN, (238, 0, 0), 
+                         pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+        else:
+            pygame.draw.rect(self.SCREEN, (0, 0, 170), 
+                         pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+        
+
+        if unit.name != "Bomb" and unit.name != "Flag":
+            text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
+            self.SCREEN.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
+
     def render(self, mode=None):
         blockSize = self.armyHeight # Set the size of the grid block
-        #for x in range(0, self.boardsize, blockSize):
-        #    for y in range(0, self.boardsize, blockSize):
-        #        rect = pygame.Rect(x, y, blockSize, blockSize)
-        #        pygame.draw.rect(self.SCREEN, self.WHITE, rect, 1)
-        # draw water
         self.SCREEN.blit(self.grass_image, (0, 0))
+
+        for i in range(self.boardWidth - 1):
+            x = self.tilePix * (i + 1)
+            #pygame.draw.line(self.SCREEN, (0, 0, 0), (x, 0), (x, self.boardsize))
+            #pygame.draw.line(self.SCREEN, (0, 0, 0), (0, x), (self.boardsize, x))
 
         for x in range(self.boardWidth):
             for y in range(self.boardWidth):
                 if self.isPool(x, y):
                     DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
                     self.SCREEN.blit(self.water_image, DEFAULT_IMAGE_POSITION)
+
+        for unit in self.redArmy.army:
+            if unit.alive:
+                (x, y) = unit.getPosition()
+                self.drawUnit(unit, x, y)
+
+        for unit in self.blueArmy.army:
+            if unit.alive:
+                (x, y) = unit.getPosition()
+                self.drawUnit(unit, x, y)
 
         pygame.display.update()
 

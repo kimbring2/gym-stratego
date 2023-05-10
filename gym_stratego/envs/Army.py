@@ -1,6 +1,7 @@
 from gym_stratego.envs.constants import *
 from tkinter import PhotoImage
 from PIL import Image, ImageTk
+import pygame
 
 
 class Army:
@@ -61,12 +62,7 @@ class Army:
             unit.possibleUnmovableRanks = list(self.livingPossibleUnmovableRanks)
 
     def getUnit(self, x, y):
-        #print("Army getUnit()")
         for unit in self.army:
-            #print("unit: ", unit)
-            #print("x: ", x)
-            #print("y: ", y)
-            #print("")
             if unit.getPosition() == (x, y):
                 return unit
 
@@ -153,18 +149,24 @@ class Icons:
     def __init__(self, tilepix):
         self.icons = {}
         for rank in ['Marshal', 'General', 'Colonel', 'Major', 'Captain', 'Lieutenant', 'Sergeant', 'Miner', 'Scout', 'Bomb', 'Spy', 'Flag']:
-            icon = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
-            icon = icon.resize((2 * tilepix, 2 * tilepix), Image.BICUBIC)
-            icon = icon.resize((tilepix, tilepix), Image.ANTIALIAS)
-            self.icons[rank] = ImageTk.PhotoImage(icon)
+            #icon = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+            #icon = icon.resize((2 * tilepix, 2 * tilepix), Image.BICUBIC)
+            #icon = icon.resize((tilepix, tilepix), Image.ANTIALIAS)
+            #self.icons[rank] = ImageTk.PhotoImage(icon)
+            icon = pygame.image.load("gym_stratego/envs/%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+            DEFAULT_IMAGE_SIZE = (tilepix, tilepix)
+            self.icons[rank] = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)
 
     def getIcon(self, rank):
         return self.icons[rank]
 
     def getImage(self, rank, size):
-        img = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
-        img = img.resize((2 * size, 2 * size), Image.BICUBIC)
-        img = img.resize((size, size), Image.ANTIALIAS)
+        #img = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+        #img = img.resize((2 * size, 2 * size), Image.BICUBIC)
+        #img = img.resize((size, size), Image.ANTIALIAS)
+        img = pygame.image.load("gym_stratego/envs/%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+        DEFAULT_IMAGE_SIZE = (size, size)
+        img = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)
 
         return img
 

@@ -20,7 +20,7 @@ class Brain(Brain.Brain):
         if boardwidth: BOARD_WIDTH = boardwidth
 
     def placeArmy(self, armyHeight):
-        if (armyHeight>3):
+        if (armyHeight > 3):
             tactic = randint(1,4)
         else: 
             tactic = randint(0,1)
