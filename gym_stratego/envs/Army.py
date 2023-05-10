@@ -1,9 +1,7 @@
-from constants import *
-#from Tkinter import PhotoImage
+from gym_stratego.envs.constants import *
 from tkinter import PhotoImage
-
-
 from PIL import Image, ImageTk
+
 
 class Army:
     ranks = ['marshal', 'general', 'colonel', 'major', 'captain',
@@ -89,6 +87,7 @@ class Army:
         for unit in self.army:
             if unit.rank > Marshal().rank: # ignore bombs and funny stuff
                 continue
+
             if unit.alive and not unit.isKnown and unit.rank > highest:
                 highest = unit.rank
 
@@ -98,8 +97,8 @@ class Army:
         """Return the number of units in the army that have not been defeated"""
         alive = 0
         for unit in self.army:
-        
             if unit.alive: alive += 1
+
         return alive
 
 
@@ -166,6 +165,7 @@ class Icons:
         img = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
         img = img.resize((2 * size, 2 * size), Image.BICUBIC)
         img = img.resize((size, size), Image.ANTIALIAS)
+
         return img
 
 

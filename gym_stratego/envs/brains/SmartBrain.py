@@ -3,11 +3,11 @@ Created on 29 jun. 2012
 
 @author: Jeroen Kools
 '''
-import brains.Brain as Brain
-import brains.randomBrain as randomBrain
-from constants import *
+import gym_stratego.envs.brains.Brain as Brain
+import gym_stratego.envs.brains.randomBrain as randomBrain
+from gym_stratego.envs.constants import *
 from random import shuffle, choice, randint
-import constants
+import gym_stratego.envs.constants as constants
 
 BOARD_WIDTH = constants.BOARD_WIDTH
 

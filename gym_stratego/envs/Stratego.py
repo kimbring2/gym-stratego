@@ -19,14 +19,9 @@ import time
 import pygame
 import sys
 
-# Tkinter and PIL for GUI and graphics
-#from Tkinter import *  # @UnusedWildImport
-#import tkMessageBox
-#import tkFileDialog
-
-import tkinter #python3
-from tkinter import messagebox as tkMessageBox #python3
-from tkinter import filedialog as tkFileDialog #python3
+import tkinter
+from tkinter import messagebox as tkMessageBox
+from tkinter import filedialog as tkFileDialog
 import tkinter as tk
 
 from PIL import Image, ImageTk
@@ -38,12 +33,9 @@ from constants import *  # @UnusedWildImport
 from brains import *  # @UnusedWildImport
 BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
 
-py26 = False
 platform = "Linux"
 
 import tkinter.ttk as ttk
-
-#from ttk import Combobox, Notebook
 
 
 def setIcon(window, icon):
@@ -288,13 +280,10 @@ class Application:
 
     def loadStats(self):
         """Load statistics of past games from the stats file"""
-        #if os.path.exists('stats.cfg'):
         if os.path.getsize('stats.cfg') > 0:  
-            #statsfile = open('stats.cfg', 'rb')
             with open('stats.cfg', 'rb') as f:
                 self.stats = pickle.load(f)
                 self.stats.lastChecked = datetime.datetime.now()
-            #statsfile.close()
         else:
             self.stats = Stats(datetime.datetime.now())
 
@@ -409,7 +398,6 @@ class Application:
 
     def helpUnits(self, frame):
         """Show help about units"""
-
         self.helpImage = Image.open("help.png")
         self.helpImage = ImageTk.PhotoImage(self.helpImage)
         lbl = Label(frame, image=self.helpImage)
@@ -419,7 +407,6 @@ class Application:
 
     def helpMore(self, frame):
         """Show help about special options and rules, different from classic Stratego"""
-
         paragraphs = [(
         "Special Rules", """
         %s includes several optional variations on the classic board game Stratego,
@@ -489,6 +476,7 @@ class Application:
 
         for p in paragraphs:
             windowtext += wrapper.fill(dedent(p)) + "\n\n"
+
         tkMessageBox.showinfo("%s %s" % (GAME_NAME, VERSION), windowtext)
 
     def setStatusBar(self, newText):
@@ -497,6 +485,8 @@ class Application:
         self.statusBar.config(text=newText)
 
     def drawMap(self):
+        print("drawMap()")
+
         """Draw the tiles and units on the map."""
         # TODO: prettier, irregular coast
         self.map.delete(tk.ALL)
@@ -514,8 +504,13 @@ class Application:
             self.map.create_line(x, 0, x, self.boardsize, fill="black")
             self.map.create_line(0, x, self.boardsize, x, fill="black")
 
+        #print("self.redArmy.army: ", self.redArmy.army)
+
         for unit in self.redArmy.army:
             if unit.alive:
+                #print("unit: ", unit)
+                #print("unit.getPosition(): ", unit.getPosition())
+
                 (x, y) = unit.getPosition()
                 self.drawUnit(self.map, unit, x, y)
 
@@ -616,9 +611,8 @@ class Application:
         """Check whether there is a pool at tile (x,y)."""
 
         # uneven board size + middle row or even board size + middle 2 rows
-        if  (self.boardWidth % 2 == 1 and y == self.boardWidth / 2) or \
+        if (self.boardWidth % 2 == 1 and y == self.boardWidth / 2) or \
             ((self.boardWidth % 2 == 0) and (y == self.boardWidth / 2 or y == (self.boardWidth / 2) - 1)):
-
             return sin(2 * pi * (x + .5) / BOARD_WIDTH * (POOLS + 0.5)) < 0
 
     def isPoolColumn(self, x):
@@ -637,7 +631,6 @@ class Application:
         #print("mapClick()")
 
         """Process clicks on the map widget."""
-
         x = int(event.x / self.tilePix)
         y = int(event.y / self.tilePix)
 
@@ -651,7 +644,6 @@ class Application:
 
         elif self.movingUnit and not self.won:
             self.moveUnit(x, y)
-
         else:
             # find clicked unit
             unit = self.getUnit(x, y)
@@ -666,7 +658,6 @@ class Application:
                         self.movingUnit = True
                         self.clickedUnit = unit
                         self.drawUnit(self.map, unit, x, y, SELECTED_RED_PLAYER_COLOR)
-
             else:
                 unit = "no unit at (%s, %s)" % (x, y)
 
@@ -727,6 +718,7 @@ class Application:
             for _step in range(MOVE_ANIM_STEPS):
                 self.root.after(MOVE_ANIM_FRAMERATE,
                     self.map.move("u" + str(id(self.clickedUnit)), stepSize * dx, stepSize * dy))
+
                 self.root.update_idletasks()
 
         target = self.getUnit(x, y)
@@ -744,8 +736,8 @@ class Application:
                 self.attack(self.clickedUnit, target)
                 if self.started:
                     self.endTurn()
-            return
 
+            return
         else:
             self.setStatusBar("Moved %s to (%s, %s)" % (self.clickedUnit, x, y))
             if (abs(self.clickedUnit.position[0] - x) + abs(self.clickedUnit.position[1] - y)) > 1 and self.clickedUnit.hasMovedFar != True:
@@ -933,13 +925,15 @@ class Application:
         if not attacker.isKnown:
             if attacker.hasMoved:
                 attackerArmy.nrOfUnknownMoved -= 1
+
             attacker.hasMoved = True
             attackerArmy.nrOfKnownMovable += 1
             for unit in attackerArmy.army:
                 if unit == attacker:
                     attacker.possibleMovableRanks = [attacker.name]
                     attacker.possibleUnmovableRanks = []
-                elif attacker.name in unit.possibleMovableRanks: unit.possibleMovableRanks.remove(attacker.name)
+                elif attacker.name in unit.possibleMovableRanks: 
+                    unit.possibleMovableRanks.remove(attacker.name)
 
         if defender.canMove and not defender.isKnown:
             if defender.hasMoved:
@@ -950,14 +944,16 @@ class Application:
                 if unit == defender:
                     defender.possibleMovableRanks = [defender.name]
                     defender.possibleUnmovableRanks = []
-                elif defender.name in unit.possibleMovableRanks: unit.possibleMovableRanks.remove(defender.name)
+                elif defender.name in unit.possibleMovableRanks: 
+                    unit.possibleMovableRanks.remove(defender.name)
         elif not defender.isKnown:
             defenderArmy.nrOfKnownUnmovable += 1
             for unit in defenderArmy.army:
                 if unit == defender:
                     defender.possibleUnmovableRanks = [defender.name]
                     defender.possibleMovableRanks = []
-                elif defender.name in unit.possibleUnmovableRanks: unit.possibleUnmovableRanks.remove(defender.name)
+                elif defender.name in unit.possibleUnmovableRanks: 
+                    unit.possibleUnmovableRanks.remove(defender.name)
 
         ##########
         text = "A %s %s attacked a %s %s. " % (attacker.color, attacker.name, defender.color, defender.name)

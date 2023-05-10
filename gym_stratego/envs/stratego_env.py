@@ -1,5 +1,14 @@
 import numpy as np
 import gym
+import pygame
+from PIL import Image, ImageTk
+from math import sin, pi
+
+from gym_stratego.envs.Army import Army, Icons
+import gym_stratego.envs.explosion
+from gym_stratego.envs.constants import *  # @UnusedWildImport
+from gym_stratego.envs.brains import *  # @UnusedWildImport
+
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -101,6 +110,35 @@ class StrategoEnv(gym.Env):
         self.heart_attack_proclivity = heart_attack_proclivity
         self.log = ''
 
+        size = "Normal"
+        self.boardWidth = SIZE_DICT[size][0]
+        self.pools = SIZE_DICT[size][1]
+        self.tilePix = SIZE_DICT[size][2]
+        self.armyHeight = min(4, (self.boardWidth - 2) / 2)
+        self.boardsize = self.boardWidth * self.tilePix
+
+        grassImage = pygame.image.load("gym_stratego/envs/%s/%s" % (TERRAIN_DIR, LAND_TEXTURE))
+        DEFAULT_IMAGE_SIZE = (self.boardWidth * self.tilePix, self.boardWidth * self.tilePix)
+        self.grass_image = pygame.transform.scale(grassImage, DEFAULT_IMAGE_SIZE)
+
+        waterImage = pygame.image.load("gym_stratego/envs/%s/%s" % (TERRAIN_DIR, WATER_TEXTURE))
+        DEFAULT_IMAGE_SIZE = (self.tilePix, self.tilePix)
+        self.water_image = pygame.transform.scale(waterImage, DEFAULT_IMAGE_SIZE)
+
+        #print("self.boardsize: ", self.boardsize)
+        #print("self.armyHeight: ", self.armyHeight)
+
+        self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
+        self.redArmy = Army("classical", "Red", self.boardWidth * self.armyHeight)
+
+        self.BLACK = (0, 0, 0)
+        self.WHITE = (200, 200, 200)
+
+        pygame.init()
+        self.SCREEN = pygame.display.set_mode((self.boardsize, self.boardsize))
+        CLOCK = pygame.time.Clock()
+        self.SCREEN.fill(self.BLACK)
+
     def observation(self):
         return np.array([self.state[o] for o in self.observations])
         
@@ -115,6 +153,7 @@ class StrategoEnv(gym.Env):
         }
         
         wakeup(self.state)
+
         return self.observation()
         
     def step(self, action):
@@ -144,11 +183,37 @@ class StrategoEnv(gym.Env):
             self.state['hypertension'] = 0
 
         self.log += str(self.state) + '\n'
+
+        pygame.display.update()
+
         return self.observation(), reward, False, {}
     
     def close(self):
         pass
         
+    def isPool(self, x, y):
+        """Check whether there is a pool at tile (x,y)."""
+        # uneven board size + middle row or even board size + middle 2 rows
+        if (self.boardWidth % 2 == 1 and y == self.boardWidth / 2) or \
+            ((self.boardWidth % 2 == 0) and (y == self.boardWidth / 2 or y == (self.boardWidth / 2) - 1)):
+            return sin(2 * pi * (x + .5) / BOARD_WIDTH * (POOLS + 0.5)) < 0
+
     def render(self, mode=None):
+        blockSize = self.armyHeight # Set the size of the grid block
+        #for x in range(0, self.boardsize, blockSize):
+        #    for y in range(0, self.boardsize, blockSize):
+        #        rect = pygame.Rect(x, y, blockSize, blockSize)
+        #        pygame.draw.rect(self.SCREEN, self.WHITE, rect, 1)
+        # draw water
+        self.SCREEN.blit(self.grass_image, (0, 0))
+
+        for x in range(self.boardWidth):
+            for y in range(self.boardWidth):
+                if self.isPool(x, y):
+                    DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
+                    self.SCREEN.blit(self.water_image, DEFAULT_IMAGE_POSITION)
+
+        pygame.display.update()
+
         print(self.log)
         self.log = ''

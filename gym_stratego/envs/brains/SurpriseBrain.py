@@ -7,9 +7,9 @@ This opponent randomly chooses from one of the better brains, so that the player
 beforehand what they're up against.
 '''
 
-import brains.Brain as Brain
-import brains.CarefulBrain as CarefulBrain
-import brains.SmartBrain as SmartBrain
+import gym_stratego.envs.brains.Brain as Brain
+import gym_stratego.envs.brains.CarefulBrain as CarefulBrain
+import gym_stratego.envs.brains.SmartBrain as SmartBrain
 from random import choice
 
 BRAINS = [CarefulBrain, SmartBrain]

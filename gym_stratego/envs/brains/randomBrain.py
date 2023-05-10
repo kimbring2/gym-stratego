@@ -6,9 +6,9 @@ Created on 29 jun. 2012
 This basic opponent places its army at random, and also select moves randomly.
 '''
 
-import brains.Brain as Brain
+import gym_stratego.envs.brains.Brain as Brain
 from random import shuffle, choice
-import constants
+import gym_stratego.envs.constants as constants
 
 BOARD_WIDTH = constants.BOARD_WIDTH
 

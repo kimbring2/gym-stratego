@@ -14,7 +14,7 @@ setup(
   install_requires=[            
           'numpy',
           'gym',
-          
+          'pygame'
       ],
   classifiers=[
     'Development Status :: 4 - Beta',      

@@ -6,13 +6,9 @@ Careful brain
 @author: Jeroen Kools
 '''
 
-import os
-
-print("os.getcwd(): ", os.getcwd())
-
-import brains.randomBrain as randomBrain
+import gym_stratego.envs.brains.randomBrain as randomBrain
 from random import shuffle, choice, gauss
-import constants
+import gym_stratego.envs.constants as constants
 
 BOARD_WIDTH = constants.BOARD_WIDTH
 

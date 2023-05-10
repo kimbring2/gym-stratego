@@ -1,7 +1,7 @@
 Metadata-Version: 2.1
 Name: gym-stratego
 Version: 0.0.1
-Summary: An OpenAI gym for Stratego board game to benchmark Reinforcement Learning algorithms
+Summary: An OpenAI Gym for Stratego board game to benchmark Reinforcement Learning algorithms
 Home-page: https://github.com/kimbring2/gym-stratego
 Author: kimbring2
 Author-email: kimbring2@gmail.com

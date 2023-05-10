@@ -70,5 +70,3 @@ SIZE_DICT = {  # Preset values for BOARD_WIDTH, POOLS and TILE_PIX, to be select
              "Normal": [10, 2, 50],
              "Large":  [14, 3, 50],
              "Extra Large": [20, 4, 40]}
-
-
