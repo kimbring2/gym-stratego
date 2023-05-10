@@ -6,19 +6,19 @@ env.action_space.seed(42)
 
 observation = env.reset()
 
-for _ in range(1000):
+for _ in range(100000000):
     env.render()
 
     action = env.action_space.sample()
-    print("action: ", action)
+    #print("action: ", action)
 
     observation, reward, done, _ = env.step(env.action_space.sample())
-    print("observation: ", observation)
+    #print("observation: ", observation)
 
     if done:
         observation = env.reset()
 
-    time.sleep(1.0)
-    print("")
+    time.sleep(0.1)
+    #print("")
 
 env.close()

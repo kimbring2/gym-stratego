@@ -118,6 +118,7 @@ class StrategoEnv(gym.Env):
         self.tilePix = SIZE_DICT[size][2]
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
+        self.diagonal = False
 
         self.unitIcons = Icons(self.tilePix)
 
@@ -154,6 +155,9 @@ class StrategoEnv(gym.Env):
 
         self.brains["Blue"].placeArmy(self.armyHeight)
 
+        self.unit_selected = False
+        self.clickedUnit = None
+
     def observation(self):
         return np.array([self.state[o] for o in self.observations])
         
@@ -172,6 +176,46 @@ class StrategoEnv(gym.Env):
         return self.observation()
         
     def step(self, action):
+        event_list = pygame.event.get()
+        for event in event_list:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                #print("event.pos: ", event.pos)
+                x = int(event.pos[0] / self.tilePix)
+                y = int(event.pos[1] / self.tilePix)
+
+                unit = self.getUnit(x, y)
+                #print("unit: ", unit)
+
+                if self.unit_selected == False and unit:
+                    unit.selected = True
+                    self.unit_selected = True
+                    self.clickedUnit = unit
+                elif self.unit_selected == True and unit:
+                    if unit.selected == True:
+                        unit.selected = False
+                        self.unit_selected = False
+                        self.clickedUnit = None
+                    else:
+                        result = self.moveUnit(x, y)
+                elif self.unit_selected == True and self.clickedUnit:
+                    #print("self.unit_selected == True and self.clickedUnit")
+                    result = self.moveUnit(x, y)
+                    self.clickedUnit.selected = False
+                    self.unit_selected = False
+                    self.clickedUnit = None
+
+                if unit:
+                    if unit.color == "Blue":
+                        #print("You clicked an enemy unit at (%s, %s)" % (x, y))
+                        self.clickedUnit.selected = False
+                        self.unit_selected = False
+                        self.clickedUnit = None
+                    else:
+                        if unit.isMovable():
+                            self.movingUnit = True
+                            self.clickedUnit = unit
+                            self.drawUnit(unit, x, y, SELECTED_RED_PLAYER_COLOR)
+
         if self.state['time_elapsed'] == 0:
             old_score = 0
         else:
@@ -216,15 +260,188 @@ class StrategoEnv(gym.Env):
     def getUnit(self, x, y):
         return self.redArmy.getUnit(x, y) or self.blueArmy.getUnit(x, y)
 
-    def legalMove(self, unit, x, y):
-        """Check whether a move:
-            - does not end in the water
-            - does not end off-board
-            - is only in one direction
-            - is not farther than one step, for non-scouts
-            - does not jump over obstacles, for scouts
-        """
+    def moveUnit(self, x, y):
+        """Move a unit according to selected unit and clicked destination"""
+        if not self.legalMove(self.clickedUnit, x, y):
+            print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
+            return False
 
+        if self.clickedUnit.color == "Red":
+            thisArmy = self.redArmy
+        else:
+            thisArmy = self.blueArmy
+
+        # Moving more than one tile will "expose" the unit as a scout
+        (i, j) = self.clickedUnit.getPosition()
+        if abs(i - x) > 1 or abs(j - y) > 1:
+            self.clickedUnit.isKnown = True
+
+        # Do move animation
+        stepSize = self.tilePix / MOVE_ANIM_STEPS
+        dx = x - i
+        dy = y - j
+
+        target = self.getUnit(x, y)
+        print("target: ", target)
+        if target:
+            if target.color == self.clickedUnit.color:
+                print("You can't move there - tile already occupied!")
+                return False
+            elif target.color == self.clickedUnit.color and not self.started:  # switch units
+                    (xold, yold) = self.clickedUnit.getPosition()
+                    target.setPosition(xold, yold)
+                    self.clickedUnit.setPosition(x, y)
+                    self.clickedUnit = None
+                    #self.movingUnit = None
+            else:
+                self.attack(self.clickedUnit, target)
+                #if self.started:
+                #    self.endTurn()
+
+            #return
+        else:
+            print("Moved %s to (%s, %s)" % (self.clickedUnit, x, y))
+            if (abs(self.clickedUnit.position[0] - x) + abs(self.clickedUnit.position[1] - y)) > 1 and self.clickedUnit.hasMovedFar != True:
+                if not self.clickedUnit.hasMoved:
+                    thisArmy.nrOfKnownMovable += 1
+                elif not self.clickedUnit.isKnown:
+                    thisArmy.nrOfUnknownMoved -= 1
+                    thisArmy.nrOfKnownMovable += 1
+
+                self.clickedUnit.hasMovedFar = True
+                for unit in thisArmy.army:
+                    if self.clickedUnit == unit:
+                        unit.isKnown = True
+                        unit.possibleMovableRanks = ["Scout"]
+                        unit.possibleUnmovableRanks = []
+                    elif "Scout" in unit.possibleMovableRanks:
+                        unit.possibleMovableRanks.remove("Scout")
+            elif self.clickedUnit.hasMoved != True:
+                thisArmy.nrOfUnknownMoved += 1
+                self.clickedUnit.hasMoved = True
+                for unit in thisArmy.army:
+                    if self.clickedUnit == unit:
+                        unit.possibleUnmovableRanks = []
+
+            self.clickedUnit.setPosition(x, y)
+            self.clickedUnit.hasMoved = True
+
+        #self.clickedUnit = None
+        #self.movingUnit = False
+
+    def attack(self, attacker, defender):
+        """Show the outcome of an attack and remove defeated pieces from the board"""
+
+        ########
+        if attacker.color == "Red":
+            attackerArmy = self.redArmy
+            defenderArmy = self.blueArmy
+        else:
+            attackerArmy = self.blueArmy
+            defenderArmy = self.redArmy
+
+        # Only the first time a piece becomes known, the possible ranks are updated:
+        if not attacker.isKnown:
+            if attacker.hasMoved:
+                attackerArmy.nrOfUnknownMoved -= 1
+
+            attacker.hasMoved = True
+            attackerArmy.nrOfKnownMovable += 1
+            for unit in attackerArmy.army:
+                if unit == attacker:
+                    attacker.possibleMovableRanks = [attacker.name]
+                    attacker.possibleUnmovableRanks = []
+                elif attacker.name in unit.possibleMovableRanks: 
+                    unit.possibleMovableRanks.remove(attacker.name)
+
+        if defender.canMove and not defender.isKnown:
+            if defender.hasMoved:
+                defenderArmy.nrOfUnknownMoved -= 1
+            defender.hasMoved = True  # Although it not moved, it is known and attacked, so..
+            defenderArmy.nrOfKnownMovable += 1
+            for unit in defenderArmy.army:
+                if unit == defender:
+                    defender.possibleMovableRanks = [defender.name]
+                    defender.possibleUnmovableRanks = []
+                elif defender.name in unit.possibleMovableRanks: 
+                    unit.possibleMovableRanks.remove(defender.name)
+        elif not defender.isKnown:
+            defenderArmy.nrOfKnownUnmovable += 1
+            for unit in defenderArmy.army:
+                if unit == defender:
+                    defender.possibleUnmovableRanks = [defender.name]
+                    defender.possibleMovableRanks = []
+                elif defender.name in unit.possibleUnmovableRanks: 
+                    unit.possibleUnmovableRanks.remove(defender.name)
+
+        ##########
+        text = "A %s %s attacked a %s %s. " % (attacker.color, attacker.name, defender.color, defender.name)
+        attacker.isKnown = True
+        defender.isKnown = True
+
+        if defender.name == "Flag":
+            attacker.position = defender.position
+            defender.die()
+            #self.victory(attacker.color)
+
+        elif attacker.canDefuseBomb and defender.name == "Bomb":
+            attacker.position = defender.position
+            defender.die()
+            defenderArmy.nrOfLiving -= 1
+            defenderArmy.nrOfKnownUnmovable -= 1
+            attacker.justAttacked = True
+            text += "The mine was disabled."
+            if (abs(attacker.position[0] - self.blueArmy.army[0].position[0]) + abs(attacker.position[1] - self.blueArmy.army[0].position[1]) == 1):
+                self.blueArmy.flagIsBombProtected = False
+            
+            if (abs(attacker.position[0] - self.redArmy.army[0].position[0]) + abs(attacker.position[1] - self.redArmy.army[0].position[1]) == 1):
+                self.redArmy.flagIsBombProtected = False
+        elif defender.name == "Bomb":
+            x, y = defender.getPosition()
+            x = (x + .5) * self.tilePix
+            y = (y + .5) * self.tilePix
+
+            attackerTag = "u" + str(id(attacker))
+            attacker.die()
+            # print 'attacker:', attackerTag, self.map.find_withtag(attackerTag)
+
+            #self.root.after(200, lambda: self.map.delete(attackerTag))
+            #explosion.kaboom(x, y, 5, self.map, self.root)
+            text += "\nThe %s was blown to pieces." % attacker.name
+
+            attackerArmy.nrOfLiving -= 1
+            attackerArmy.nrOfKnownMovable -= 1
+        elif attacker.canKillMarshal and defender.name == "Marshal":
+            attacker.position = defender.position
+            defenderArmy.nrOfLiving -= 1
+            defenderArmy.nrOfMoved -= 1
+            defender.die()
+            attacker.justAttacked = True
+            text += "The marshal has been assassinated."
+        elif attacker.rank > defender.rank:
+            attacker.position = defender.position
+            defenderArmy.nrOfLiving -= 1
+            defenderArmy.nrOfMoved -= 1
+            defender.die()
+            attacker.justAttacked = True
+            text += "The %s was defeated." % defender.name
+        elif attacker.rank == defender.rank:
+            defenderArmy.nrOfLiving -= 1
+            defenderArmy.nrOfMoved -= 1
+            attackerArmy.nrOfLiving -= 1
+            attackerArmy.nrOfMoved -= 1
+            attacker.die()
+            defender.die()
+            text += "Both units died."
+        else:
+            attackerArmy.nrOfLiving -= 1
+            attackerArmy.nrOfMoved -= 1
+            attacker.die()
+            text += "The %s was defeated." % attacker.name
+
+        print("text: ", text)
+
+    def legalMove(self, unit, x, y):
         if self.isPool(x, y):
             return False
 
@@ -235,11 +452,10 @@ class StrategoEnv(gym.Env):
         if x >= self.boardWidth or y >= self.boardWidth or x < 0 or y < 0:
             return False
 
-        if not self.started:
-            if y < (self.boardWidth - 4):
-                return False
-
-            return True
+        #if not self.started:
+        #    if y < (self.boardWidth - 4):
+        #        return False
+        #    return True
 
         if unit.walkFar:
             if dx != 0 and dy != 0:
@@ -258,14 +474,12 @@ class StrategoEnv(gym.Env):
                 for i in range(x0 + 1, x1):
                     if self.isPool(i, y) or self.getUnit(i, y):
                         return False
-
             elif dy > 0 and dx == 0:
                 y0 = min(y, uy)
                 y1 = max(y, uy)
                 for i in range(y0 + 1, y1):
                     if self.isPool(x, i) or self.getUnit(x, i):
                         return False
-
             else:
                 xdir = dx / (x - ux)
                 ydir = dy / (y - uy)
@@ -289,20 +503,18 @@ class StrategoEnv(gym.Env):
             color = RED_PLAYER_COLOR if unit.color == "Red" else BLUE_PLAYER_COLOR
 
         hilight = SELECTED_RED_PLAYER_COLOR if unit.color == "Red" else SELECTED_BLUE_PLAYER_COLOR
-        shadow = SHADOW_RED_COLOR if unit.color == "Red" else SHADOW_BLUE_COLOR
 
         #print("unit.name: %s, x: %d, y: %d, unit.color: %s" % (unit.name, x, y, unit.color))
 
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
         self.SCREEN.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
-        if unit.color == "Red":
-            pygame.draw.rect(self.SCREEN, (238, 0, 0), 
-                         pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+        if unit.selected:
+            pygame.draw.rect(self.SCREEN, hilight, 
+                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
         else:
-            pygame.draw.rect(self.SCREEN, (0, 0, 170), 
-                         pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
-        
+            pygame.draw.rect(self.SCREEN, color, 
+                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
 
         if unit.name != "Bomb" and unit.name != "Flag":
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
@@ -335,5 +547,5 @@ class StrategoEnv(gym.Env):
 
         pygame.display.update()
 
-        print(self.log)
+        #print(self.log)
         self.log = ''

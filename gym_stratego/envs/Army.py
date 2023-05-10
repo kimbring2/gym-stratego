@@ -115,6 +115,7 @@ class Unit:
         self.isKnown = False          # whether the AI already knows this piece's rank 
         self.possibleMovableRanks = []
         self.possibleUnmovableRanks = []
+        self.selected = False
 
     def getPosition(self):
         return self.position

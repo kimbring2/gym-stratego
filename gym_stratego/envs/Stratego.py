@@ -641,7 +641,6 @@ class Application:
 
         if self.placingUnit:
             self.placeUnit(x, y)
-
         elif self.movingUnit and not self.won:
             self.moveUnit(x, y)
         else:
@@ -652,7 +651,6 @@ class Application:
                 if unit.color == "Blue":
                     self.setStatusBar("You clicked an enemy unit at (%s, %s)" % (x, y))
                     return
-
                 else:
                     if unit.isMovable() or not self.started:
                         self.movingUnit = True
