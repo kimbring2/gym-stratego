@@ -72,5 +72,5 @@ observation, reward, done, step_phase = env.step_render()
 [![Derk demo](https://img.youtube.com/vi/avQra5Wt-wI/sddefault.jpg)](https://www.youtube.com/watch?v=avQra5Wt-wI "Derk video - Click to Watch!")
 <strong>Click to Watch!</strong>
 
-[![human play](https://img.youtube.com/vi/avQra5Wt-wI/sddefault.jpg)](https://youtu.be/yHqzAhBBAwE "Play as human video - Click to Watch!")
+[![human play](https://i3.ytimg.com/vi/yHqzAhBBAwE/hqdefault.jpg)](https://youtu.be/yHqzAhBBAwE "Play as human video - Click to Watch!")
 <strong>Click to Watch!</strong>
