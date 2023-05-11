@@ -111,11 +111,16 @@ class StrategoEnv(gym.Env):
                     movable_units.append(unit.tag_number)
 
         for unit in self.blueArmy.army:
-            if unit.isOffBoard() == False:
+            if unit.isOffBoard() == False and unit.isKnown == False:
                 x, y = unit.getPosition()
                 state[x, y, 0] = 30.0
                 state[x, y, 1] = 30.0
                 state[x, y, 2] = 30.0
+            elif unit.isOffBoard() == False and unit.isKnown:
+                x, y = unit.getPosition()
+                state[x, y, 0] = 30.0
+                state[x, y, 1] = 30.0
+                state[x, y, 2] = int(unit.rank * 10)
             else:
                 blue_offboard.append(unit.rank)
 

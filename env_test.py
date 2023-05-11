@@ -15,7 +15,7 @@ for episode in range(0, 10000):
     clicked_unit = observation['clicked_unit']
     movable_positions = observation['movable_positions']
 
-    print("battle_field.shape: ", battle_field.shape)
+    print("battle_field: ", battle_field)
     print("red_offboard: ", red_offboard)
     print("blue_offboard: ", blue_offboard)
     print("movable_units: ", movable_units)
@@ -25,8 +25,8 @@ for episode in range(0, 10000):
     step = 0
     while True:
         print("step: ", step)
-        #cv2.imshow('battle_field', battle_field)
-        #cv2.waitKey(1)
+        cv2.imshow('battle_field', battle_field)
+        cv2.waitKey(1)
 
         print("step_phase: ", step_phase)
 
