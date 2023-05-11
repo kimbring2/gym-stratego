@@ -13,15 +13,7 @@ BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not mod
 
 
 class StrategoEnv(gym.Env):
-    def __init__(self, heart_attack_proclivity=0.5):
-        #self.actions = [do_nothing, drink_coffee, drink_beer, sleep]
-        #self.observations = ['alertness', 'hypertension', 'intoxication',
-        #                     'time_since_slept', 'time_elapsed', 'work_done']
-        #self.action_space = gym.spaces.Discrete(len(self.actions))
-        #self.observation_space = make_heartpole_obs_space(self.observations)
-        #self.heart_attack_proclivity = heart_attack_proclivity
-        #self.log = ''
-
+    def __init__(self):
         size = "Normal"
         self.boardWidth = SIZE_DICT[size][0]
         self.pools = SIZE_DICT[size][1]
@@ -46,17 +38,16 @@ class StrategoEnv(gym.Env):
         pygame.init()
 
         self.my_font = pygame.font.Font('gym_stratego/envs/fonts/FreeSansBold.ttf', 16)
-        self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2, self.boardsize * 2))
+        self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2, self.boardsize * 1))
         self.BATTLE_SCREEN = pygame.Surface((self.boardsize, self.boardsize))
         self.RED_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
         self.BLUE_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
 
         CLOCK = pygame.time.Clock()
 
-    def isMovable(self, unit):
+    def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board
         and whether or not diagonal movement is enabled."""
-
         (x, y) = unit.position
 
         if unit.rank != 11:
@@ -69,10 +60,31 @@ class StrategoEnv(gym.Env):
             north = False
             south = False
             east = False
-
+  
         movable_direction = [west, north, south, east]
+        movable = west or north or south or east
 
-        return movable_direction
+        return movable
+
+    def get_unit_from_tag(self, tag_number):
+        for unit in self.redArmy.army:
+            if unit.tag_number == tag_number:
+                return unit
+
+    def get_movable_positions(self, tag_number):
+        unit = self.get_unit_from_tag(tag_number)
+
+        movable_positions = []
+        (x_self, y_self) = unit.position
+        for x in range(self.boardWidth):
+            for y in range(self.boardWidth):
+                if x == x_self and y == y_self:
+                    continue
+
+                if self.legalMove(unit, x, y):
+                    movable_positions.append((x, y))
+
+        return movable_positions
 
     def observation(self):
         state = np.ones((self.boardWidth, self.boardWidth, 3)) * 255.0
@@ -82,8 +94,8 @@ class StrategoEnv(gym.Env):
         blue_offboard = []
 
         for unit in self.redArmy.army:
-            print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
-            print("self.isMovable(unit): ", self.isMovable(unit))
+            #print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
+            #movable = self.is_movable(unit)
 
             if unit.isOffBoard() == False:
                 x, y = unit.getPosition()
@@ -94,6 +106,11 @@ class StrategoEnv(gym.Env):
                 #print("unit: ", unit)
                 red_offboard.append(unit.rank)
 
+            #print("unit: ", unit)
+            if unit.isOffBoard() == False:
+                if self.is_movable(unit):
+                    movable_units.append(unit.tag_number)
+
         for unit in self.blueArmy.army:
             if unit.isOffBoard() == False:
                 x, y = unit.getPosition()
@@ -103,11 +120,23 @@ class StrategoEnv(gym.Env):
             else:
                 blue_offboard.append(unit.rank)
 
+        if self.clicked_unit:
+            clicked_unit = (self.clicked_unit).tag_number
+        else: 
+            clicked_unit = -1
+
+        if self.step_phase == 2:
+            movable_positions = self.get_movable_positions((self.clicked_unit).tag_number)
+        else:
+            movable_positions = -1
+
         observation = {
             'battle_field': state,
             'red_offboard': red_offboard,
             'blue_offboard': blue_offboard,
-            'movable_units' : movable_units
+            'movable_units' : movable_units,
+            'clicked_unit': clicked_unit,
+            'movable_positions': movable_positions
         }
 
         return observation
@@ -115,16 +144,59 @@ class StrategoEnv(gym.Env):
     def reset(self):
         self.newGame()
 
-        return self.observation()
+        return self.observation(), self.reward, self.done, self.step_phase
         
+    def move_unit(self, x, y):
+        unit = self.getUnit(x, y)
+
+        if self.unit_selected == False and unit:
+            if unit.color == "Red":
+                unit.selected = True
+                self.unit_selected = True
+                self.clicked_unit = unit
+                self.step_phase = 2
+
+                return self.observation(), self.reward, self.done, self.step_phase
+        elif self.unit_selected == True and unit:
+            if unit.selected == True and unit.color == "Red":
+                unit.selected = False
+                self.unit_selected = False
+                self.clicked_unit = None
+                self.step_phase = 1
+            else:
+                result = self.moveUnit(x, y)
+                unit.selected = False
+                self.step_phase = 1
+                self.unit_selected = False
+                self.clicked_unit = None
+
+                return self.observation(), self.reward, self.done, self.step_phase
+        elif self.unit_selected == True and self.clicked_unit:
+            result = self.moveUnit(x, y)
+            self.clicked_unit.selected = False
+            self.unit_selected = False
+            self.clicked_unit = None
+            self.step_phase = 1
+
+        #return self.observation(), self.reward, self.done, self.step_phase
+
     def step(self, action):
-        self.step_phase = 0
+        self.update_screen()
+        self.move_unit(action[0], action[1])
+
+        return self.observation(), self.reward, self.done, self.step_phase
+
+    def step_render(self, action):
         while True:
             self.update_screen()
 
+            #print("self.step_phase: ", self.step_phase)
             if self.step_phase == 3:
-                reward = 0
+                self.step_phase = 1
                 break
+            elif self.step_phase == 2:
+                #print("self.unit_selected: ", self.unit_selected)
+                pass
 
             event_list = pygame.event.get()
             for event in event_list:
@@ -132,13 +204,17 @@ class StrategoEnv(gym.Env):
                     x = int(event.pos[0] / self.tilePix)
                     y = int(event.pos[1] / self.tilePix)
 
+                    print("(%d, %d)" % (x, y))
+                    self.move_unit(x, y)
+                    return self.observation(), self.reward, self.done, self.step_phase
+                    '''
                     unit = self.getUnit(x, y)
-
+                    
                     if self.unit_selected == False and unit:
                         if unit.color == "Red":
                             unit.selected = True
                             self.unit_selected = True
-                            self.clickedUnit = unit
+                            self.clicked_unit = unit
                             self.step_phase = 2
 
                             return self.observation(), self.reward, self.done, self.step_phase
@@ -146,30 +222,28 @@ class StrategoEnv(gym.Env):
                         if unit.selected == True and unit.color == "Red":
                             unit.selected = False
                             self.unit_selected = False
-                            self.clickedUnit = None
+                            self.clicked_unit = None
                             self.step_phase = 1
                         else:
                             result = self.moveUnit(x, y)
                             unit.selected = False
                             self.step_phase = 3
                             self.unit_selected = False
-                            self.clickedUnit = None
+                            self.clicked_unit = None
 
                             return self.observation(), self.reward, self.done, self.step_phase
-                    elif self.unit_selected == True and self.clickedUnit:
+                    elif self.unit_selected == True and self.clicked_unit:
                         result = self.moveUnit(x, y)
-                        self.clickedUnit.selected = False
+                        self.clicked_unit.selected = False
                         self.unit_selected = False
-                        self.clickedUnit = None
+                        self.clicked_unit = None
                         self.step_phase = 3
 
                         return self.observation(), self.reward, self.done, self.step_phase
+                    '''
 
         return self.observation(), self.reward, self.done, self.step_phase
 
-    def close(self):
-        pass
-       
     def newGame(self, event=None):
         self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
         self.redArmy = Army("classical", "Red", self.boardWidth * self.armyHeight)
@@ -187,7 +261,7 @@ class StrategoEnv(gym.Env):
         self.brains["Blue"].placeArmy(self.armyHeight)
 
         self.unit_selected = False
-        self.clickedUnit = None
+        self.clicked_unit = None
 
         self.firstMove = "Red"
         self.turn = self.firstMove
@@ -217,70 +291,69 @@ class StrategoEnv(gym.Env):
 
     def moveUnit(self, x, y):
         """Move a unit according to selected unit and clicked destination"""
-        if not self.legalMove(self.clickedUnit, x, y):
+        if not self.legalMove(self.clicked_unit, x, y):
             print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
             return False
 
-        if self.clickedUnit.color == "Red":
+        if self.clicked_unit.color == "Red":
             thisArmy = self.redArmy
         else:
             thisArmy = self.blueArmy
 
         # Moving more than one tile will "expose" the unit as a scout
-        (i, j) = self.clickedUnit.getPosition()
+        (i, j) = self.clicked_unit.getPosition()
         if abs(i - x) > 1 or abs(j - y) > 1:
-            self.clickedUnit.isKnown = True
+            self.clicked_unit.isKnown = True
 
         # Do move animation
         stepSize = self.tilePix / MOVE_ANIM_STEPS
         dx = x - i
         dy = y - j
 
-        self.clickedUnit.unit_selected = False
-        self.clickedUnit.selected = False
+        self.clicked_unit.unit_selected = False
+        self.clicked_unit.selected = False
         target = self.getUnit(x, y)
         if target:
-            if target.color == self.clickedUnit.color:
+            if target.color == self.clicked_unit.color:
                 print("You can't move there - tile already occupied!")
                 return False
-            elif target.color == self.clickedUnit.color and not self.started:  # switch units
-                    (xold, yold) = self.clickedUnit.getPosition()
+            elif target.color == self.clicked_unit.color and not self.started:  # switch units
+                    (xold, yold) = self.clicked_unit.getPosition()
                     target.setPosition(xold, yold)
-                    self.clickedUnit.setPosition(x, y)
-                    self.clickedUnit = None
-                    #self.movingUnit = None
+                    self.clicked_unit.setPosition(x, y)
+                    self.clicked_unit = None
             else:
-                self.attack(self.clickedUnit, target)
+                self.attack(self.clicked_unit, target)
                 if self.started:
                     self.endTurn()
 
             return
         else:
-            print("Moved %s to (%s, %s)" % (self.clickedUnit, x, y))
-            if (abs(self.clickedUnit.position[0] - x) + abs(self.clickedUnit.position[1] - y)) > 1 and self.clickedUnit.hasMovedFar != True:
-                if not self.clickedUnit.hasMoved:
+            print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
+            if (abs(self.clicked_unit.position[0] - x) + abs(self.clicked_unit.position[1] - y)) > 1 and self.clicked_unit.hasMovedFar != True:
+                if not self.clicked_unit.hasMoved:
                     thisArmy.nrOfKnownMovable += 1
-                elif not self.clickedUnit.isKnown:
+                elif not self.clicked_unit.isKnown:
                     thisArmy.nrOfUnknownMoved -= 1
                     thisArmy.nrOfKnownMovable += 1
 
-                self.clickedUnit.hasMovedFar = True
+                self.clicked_unit.hasMovedFar = True
                 for unit in thisArmy.army:
-                    if self.clickedUnit == unit:
+                    if self.clicked_unit == unit:
                         unit.isKnown = True
                         unit.possibleMovableRanks = ["Scout"]
                         unit.possibleUnmovableRanks = []
                     elif "Scout" in unit.possibleMovableRanks:
                         unit.possibleMovableRanks.remove("Scout")
-            elif self.clickedUnit.hasMoved != True:
+            elif self.clicked_unit.hasMoved != True:
                 thisArmy.nrOfUnknownMoved += 1
-                self.clickedUnit.hasMoved = True
+                self.clicked_unit.hasMoved = True
                 for unit in thisArmy.army:
-                    if self.clickedUnit == unit:
+                    if self.clicked_unit == unit:
                         unit.possibleUnmovableRanks = []
 
-            self.clickedUnit.setPosition(x, y)
-            self.clickedUnit.hasMoved = True
+            self.clicked_unit.setPosition(x, y)
+            self.clicked_unit.hasMoved = True
 
         if self.started:
             self.endTurn()
@@ -409,9 +482,6 @@ class StrategoEnv(gym.Env):
             attacker.die()
             defender.die()
             text += "Both units died."
-
-            #attackerArmy.unit_selected = False
-            #defenderArmy.unit_selected = False
         else:
             attackerArmy.nrOfLiving -= 1
             attackerArmy.nrOfMoved -= 1
