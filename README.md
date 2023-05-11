@@ -8,7 +8,9 @@ $ cd gym-stratego
 $ pip install -e .
 ```
 
-# OpenAI Gym sequence
+# OpenAI Gym Sequence
+
+<img src="images/game_rule.png" width="800">
 
 # Observation and Action
 | State |  Format |
