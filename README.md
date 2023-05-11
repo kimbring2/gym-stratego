@@ -33,7 +33,6 @@ for episode in range(0, 10000):
         #cv2.waitKey(1)
 
         print("step_phase: ", step_phase)
-        print("step: ", step)
 
         #env.render()
         if step_phase == 1:
