@@ -153,11 +153,17 @@ class StrategoEnv(gym.Env):
         pygame.init()
 
         self.my_font = pygame.font.Font('gym_stratego/envs/fonts/FreeSansBold.ttf', 16)
-        self.SCREEN = pygame.display.set_mode((self.boardsize, self.boardsize))
-        CLOCK = pygame.time.Clock()
-        self.SCREEN.fill(self.BLACK)
+        self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2, self.boardsize * 2))
+        self.BATTLE_SCREEN = pygame.Surface((self.boardsize, self.boardsize))
+        self.RED_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
+        self.BLUE_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
 
-        #self.newGame()
+        CLOCK = pygame.time.Clock()
+        self.MAIN_SCREEN.fill(self.BLACK)
+        self.RED_SIDE_SCREEN.fill(self.WHITE)
+        self.BLUE_SIDE_SCREEN.fill(self.WHITE)
+
+        pygame.draw.line(self.RED_SIDE_SCREEN, (0, 0, 0), (0, 0), (self.boardsize, 0))
 
         self.done = False
 
@@ -184,12 +190,10 @@ class StrategoEnv(gym.Env):
         event_list = pygame.event.get()
         for event in event_list:
             if event.type == pygame.MOUSEBUTTONDOWN:
-                #print("event.pos: ", event.pos)
                 x = int(event.pos[0] / self.tilePix)
                 y = int(event.pos[1] / self.tilePix)
 
                 unit = self.getUnit(x, y)
-                #print("unit: ", unit)
 
                 if self.unit_selected == False and unit:
                     unit.selected = True
@@ -208,7 +212,6 @@ class StrategoEnv(gym.Env):
                     self.clickedUnit.selected = False
                     self.unit_selected = False
                     self.clickedUnit = None
-                    #self.endTurn()
 
                 if unit:
                     if unit.color == "Blue":
@@ -220,7 +223,7 @@ class StrategoEnv(gym.Env):
                         if unit.isMovable():
                             self.movingUnit = True
                             self.clickedUnit = unit
-                            self.drawUnit(unit, x, y, SELECTED_RED_PLAYER_COLOR)
+                            self.drawUnit(self.BATTLE_SCREEN, unit, x, y, SELECTED_RED_PLAYER_COLOR)
 
         if self.state['time_elapsed'] == 0:
             old_score = 0
@@ -315,7 +318,6 @@ class StrategoEnv(gym.Env):
         dy = y - j
 
         target = self.getUnit(x, y)
-        #print("target: ", target)
         if target:
             if target.color == self.clickedUnit.color:
                 print("You can't move there - tile already occupied!")
@@ -359,52 +361,25 @@ class StrategoEnv(gym.Env):
             self.clickedUnit.setPosition(x, y)
             self.clickedUnit.hasMoved = True
 
-        #self.clickedUnit = None
-        #self.movingUnit = False
         if self.started:
             self.endTurn()
 
     def victory(self, color, noMoves=False):
-        #print("victory()")
-
         """Show the victory/defeat screen"""
         self.won = True
-        #self.drawMap()
-        #top = Toplevel(width=300)
-        #setIcon(top, "flag")
-        #flagimg1 = Image.open("%s/%s.%s" % (ICON_DIR, "flag", ICON_TYPE))
-        #flagimg2 = ImageTk.PhotoImage(flagimg1)
-        #lbl = Label(top, image=flagimg2)
-        #lbl.image = flagimg2
-        #lbl.grid(row=0, column=1, sticky=tk.NW)
-
         if color == "Red":
-            #top.title("Victory!")
             if noMoves:
                 messageTxt = "The enemy army has been immobilized. Congratulations, you win!"
             else:
                 messageTxt = "Congratulations! You've captured the enemy flag!"
         else:
-            #top.title("Defeat!")
             if noMoves:
                 messageTxt = "There are no valid moves left. You lose."
             else:
                 messageTxt = "Unfortunately, the enemy has captured your flag. You lose."
 
         casualties = len(self.redArmy.army) - self.redArmy.nrAlive()
-        #self.stats.addGame(color == "Red", casualties, self.turnNr)
-        #message = Label(top, text=messageTxt)
-        #message.grid(row=0, column=0, sticky=tk.NE, ipadx=15, ipady=50)
-
-        #ok = Button(top, text="OK", command=top.destroy)
-        #ok.grid(row=1, column=0, columnspan=2, ipadx=15, ipady=5, pady=5)
-
-        #message.configure(width=40, justify=CENTER, wraplength=150)
         print("%s has won the game in %i turns!" % (color, self.turnNr))
-        #if color == "Red":
-        #    self.playSound(SOUND_WIN)
-        #else:
-        #    self.playSound(SOUND_LOSE)
 
         self.done = True
 
@@ -483,9 +458,6 @@ class StrategoEnv(gym.Env):
             attackerTag = "u" + str(id(attacker))
             attacker.die()
             # print 'attacker:', attackerTag, self.map.find_withtag(attackerTag)
-
-            #self.root.after(200, lambda: self.map.delete(attackerTag))
-            #explosion.kaboom(x, y, 5, self.map, self.root)
             text += "\nThe %s was blown to pieces." % attacker.name
 
             attackerArmy.nrOfLiving -= 1
@@ -518,7 +490,7 @@ class StrategoEnv(gym.Env):
             attacker.die()
             text += "The %s was defeated." % attacker.name
 
-        print("text: ", text)
+        #print("text: ", text)
 
     def otherPlayer(self, color):
         """Return opposite color"""
@@ -535,8 +507,6 @@ class StrategoEnv(gym.Env):
         return self.redArmy
 
     def endTurn(self):
-        print("endTurn()")
-
         """Switch turn to other player and check for end of game conditions"""
         self.turn = self.otherPlayer(self.turn)
         self.turnNr += 1
@@ -551,8 +521,6 @@ class StrategoEnv(gym.Env):
 
             unit = self.getUnit(oldlocation[0], oldlocation[1])
             unit.hasMoved = True
-
-            print("unit: ", unit)
 
             # Do move animation
             stepSize = self.tilePix / MOVE_ANIM_STEPS
@@ -637,7 +605,7 @@ class StrategoEnv(gym.Env):
 
         return True
 
-    def drawUnit(self, unit, x, y, color=None):
+    def drawUnit(self, screen, unit, x, y, color=None):
         """Draw unit tile with correct color and image, 3d border etc"""
         if color == None:
             color = RED_PLAYER_COLOR if unit.color == "Red" else BLUE_PLAYER_COLOR
@@ -647,45 +615,84 @@ class StrategoEnv(gym.Env):
         #print("unit.name: %s, x: %d, y: %d, unit.color: %s" % (unit.name, x, y, unit.color))
 
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
-        self.SCREEN.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
+        screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
         if unit.selected:
-            pygame.draw.rect(self.SCREEN, hilight, 
+            pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                              pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
         else:
-            pygame.draw.rect(self.SCREEN, color, 
+            pygame.draw.rect(self.BATTLE_SCREEN, color, 
                              pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
 
         if unit.name != "Bomb" and unit.name != "Flag":
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
-            self.SCREEN.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
+            screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
+
+        if not unit.alive:
+            pygame.draw.line(screen, (0, 0, 0), (x * self.tilePix, y * self.tilePix), ((y + 1) * self.tilePix, (y + 1) * self.tilePix))
+            pygame.draw.line(screen, (0, 0, 0), (x * self.tilePix, (y + 1) * self.tilePix), ((x + 1) * self.tilePix, y * self.tilePix))
+
+    def offBoard(self, x):
+        """Return negative coordinates used to indicate off-board position. Avoid zero."""
+        return -x - 1
+
+    def drawSidePanels(self):
+        """Draw the unplaced units in the sidebar widget."""
+        #self.blueUnitPanel.delete(tk.ALL)
+        #self.redUnitPanel.delete(tk.ALL)
+        #self.blueUnitPanel.create_rectangle(0, 0, 10 * self.tilePix, 4 * self.tilePix, fill=UNIT_PANEL_COLOR)
+        #self.redUnitPanel.create_rectangle(0, 0, 10 * self.tilePix, 4 * self.tilePix, fill=UNIT_PANEL_COLOR)
+
+        unplacedRed = 0
+        for unit in sorted(self.redArmy.army, key=lambda x: x.sortOrder):
+            if unit.isOffBoard():
+                x = int(unplacedRed % 10)
+                y = int(unplacedRed / 10)
+
+                unit.setPosition(self.offBoard(x), self.offBoard(y))
+                self.drawUnit(self.RED_SIDE_SCREEN, unit, x, y)
+                unplacedRed += 1
+
+        unplacedBlue = 0
+        for unit in sorted(self.blueArmy.army, key=lambda x: x.sortOrder):
+            if unit.isOffBoard():
+                x = int(unplacedBlue % 10)
+                y = int(unplacedBlue / 10)
+                unit.setPosition(self.offBoard(x), self.offBoard(y))
+                self.drawUnit(self.BLUE_SIDE_SCREEN, unit, x, y)
+                unplacedBlue += 1
 
     def render(self, mode=None):
         blockSize = self.armyHeight # Set the size of the grid block
-        self.SCREEN.blit(self.grass_image, (0, 0))
+        self.BATTLE_SCREEN.blit(self.grass_image, (0, 0))
 
         for i in range(self.boardWidth - 1):
             x = self.tilePix * (i + 1)
-            #pygame.draw.line(self.SCREEN, (0, 0, 0), (x, 0), (x, self.boardsize))
-            #pygame.draw.line(self.SCREEN, (0, 0, 0), (0, x), (self.boardsize, x))
+            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (x, 0), (x, self.boardsize))
+            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (0, x), (self.boardsize, x))
 
         for x in range(self.boardWidth):
             for y in range(self.boardWidth):
                 if self.isPool(x, y):
                     DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
-                    self.SCREEN.blit(self.water_image, DEFAULT_IMAGE_POSITION)
+                    self.BATTLE_SCREEN.blit(self.water_image, DEFAULT_IMAGE_POSITION)
 
         for unit in self.redArmy.army:
             if unit.alive:
                 (x, y) = unit.getPosition()
-                self.drawUnit(unit, x, y)
+                self.drawUnit(self.BATTLE_SCREEN, unit, x, y)
 
         for unit in self.blueArmy.army:
             if unit.alive:
                 (x, y) = unit.getPosition()
-                self.drawUnit(unit, x, y)
+                self.drawUnit(self.BATTLE_SCREEN, unit, x, y)
+
+        self.drawSidePanels()
+
+        self.MAIN_SCREEN.blit(self.BATTLE_SCREEN, (0, 0))
+        self.MAIN_SCREEN.blit(self.BLUE_SIDE_SCREEN, (self.boardsize, 0))
+        self.MAIN_SCREEN.blit(self.RED_SIDE_SCREEN, (self.boardsize, int(self.boardsize / 2)))
 
         pygame.display.update()
 
-        #print(self.log)
         self.log = ''
