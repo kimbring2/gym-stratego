@@ -21,7 +21,6 @@ class Brain(Brain.Brain):
         if boardwidth: BOARD_WIDTH = boardwidth
 
     def placeArmy(self, armyHeight):
-
         positions = []
 
         if self.army.color == "Blue":
@@ -36,8 +35,9 @@ class Brain(Brain.Brain):
 
         shuffle(list(positions))
 
-        for unit in self.army.army:
+        for i, unit in enumerate(self.army.army):
             if unit.isOffBoard():
+                unit.tag_number = i
                 unit.position = positions.pop()
 
     def findMove(self):

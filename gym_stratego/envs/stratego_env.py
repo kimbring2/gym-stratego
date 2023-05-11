@@ -12,122 +12,15 @@ from gym_stratego.envs.brains import *
 BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
-def heart_attack_risk(hypertension, heart_attack_proclivity=0.5):
-    return heart_attack_proclivity * sigmoid(hypertension - 6)
-
-
-def heart_attack_occured(state, heart_attack_proclivity=0.5):
-    return np.random.uniform(0, 1) < heart_attack_risk(state['hypertension'], heart_attack_proclivity)
-
-
-def alertness_decay(time_since_slept):
-    return sigmoid((time_since_slept - 40) / 10)
-
-
-def crippling_anxiety(alertness):
-    return sigmoid(alertness - 3)
-
-
-def gaussian(x, mu, sig):
-    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
-
-
-def ballmer_function(intoxication):
-    return sigmoid((0.05 - intoxication) * 50) + 2 * gaussian(intoxication, 0.135, 0.005)
-
-
-def wakeup(state):
-    state['alertness'] = np.random.uniform(0.7, 1.3)
-    state['time_since_slept'] = 0
-
-
-def drink_coffee(state):
-    state['alertness'] += np.random.uniform(0, 1)
-    state['hypertension'] += np.random.uniform(0, 0.3)
-
-
-def drink_beer(state):
-    state['alertness'] -= np.random.uniform(0, 0.5)
-    state['hypertension'] += np.random.uniform(0, 0.3)
-    # source https://attorneydwi.com/b-a-c-per-drink/
-    state['intoxication'] += np.random.uniform(0.01, 0.03)
-
-decay_rate = 0.97
-half_life = decay_rate ** 24
-
-
-def half_hour_passed(state):
-    state['alertness'] -= alertness_decay(state['time_since_slept'])
-    state['hypertension'] = decay_rate * state['hypertension']
-    state['intoxication'] = decay_rate * state['intoxication']
-    state['time_since_slept'] += 1
-    state['time_elapsed'] += 1
-
-
-def productivity(state):
-    p = 1
-    p *= state['alertness']
-    p *= 1 - crippling_anxiety(state['alertness'])
-    p *= ballmer_function(state['intoxication'])
-
-    return p
-
-
-def work(state):
-    state['work_done'] += productivity(state)
-    half_hour_passed(state)
-
-
-def do_nothing(state):
-    pass
-
-
-def sleep(state):
-    """Have 16 half-hours of healthy sleep"""
-    for hh in range(16):
-        half_hour_passed(state)
-
-    wakeup(state)
-
-
-def make_heartpole_obs_space(observations):
-    lower_obs_bound = {
-        'alertness': - np.inf,
-        'hypertension': 0,
-        'intoxication': 0,
-        'time_since_slept': 0,
-        'time_elapsed': 0,
-        'work_done': - np.inf
-    }
-    higher_obs_bound = {
-        'alertness': np.inf,
-        'hypertension': np.inf,
-        'intoxication': np.inf,
-        'time_since_slept': np.inf,
-        'time_elapsed': np.inf,
-        'work_done': np.inf
-    }
-
-    low = np.array([lower_obs_bound[o] for o in observations])
-    high = np.array([higher_obs_bound[o] for o in observations])
-    shape = (len(observations),)
-    
-    return gym.spaces.Box(low,high,shape)
-
-
 class StrategoEnv(gym.Env):
     def __init__(self, heart_attack_proclivity=0.5):
-        self.actions = [do_nothing, drink_coffee, drink_beer, sleep]
-        self.observations = ['alertness', 'hypertension', 'intoxication',
-                             'time_since_slept', 'time_elapsed', 'work_done']
-        self.action_space = gym.spaces.Discrete(len(self.actions))
-        self.observation_space = make_heartpole_obs_space(self.observations)
-        self.heart_attack_proclivity = heart_attack_proclivity
-        self.log = ''
+        #self.actions = [do_nothing, drink_coffee, drink_beer, sleep]
+        #self.observations = ['alertness', 'hypertension', 'intoxication',
+        #                     'time_since_slept', 'time_elapsed', 'work_done']
+        #self.action_space = gym.spaces.Discrete(len(self.actions))
+        #self.observation_space = make_heartpole_obs_space(self.observations)
+        #self.heart_attack_proclivity = heart_attack_proclivity
+        #self.log = ''
 
         size = "Normal"
         self.boardWidth = SIZE_DICT[size][0]
@@ -160,30 +53,74 @@ class StrategoEnv(gym.Env):
 
         CLOCK = pygame.time.Clock()
 
+    def isMovable(self, unit):
+        """ Return a list of directly adjacent tile coordinates, considering the edge of the board
+        and whether or not diagonal movement is enabled."""
+
+        (x, y) = unit.position
+
+        if unit.rank != 11:
+            west = self.legalMove(unit, x - 1, y)
+            north = self.legalMove(unit, x, y - 1)
+            south = self.legalMove(unit, x, y + 1)
+            east = self.legalMove(unit, x + 1, y)
+        else:
+            west = False
+            north = False
+            south = False
+            east = False
+
+        movable_direction = [west, north, south, east]
+
+        return movable_direction
+
     def observation(self):
-        return np.array([self.state[o] for o in self.observations])
+        state = np.ones((self.boardWidth, self.boardWidth, 3)) * 255.0
+
+        movable_units = []
+        red_offboard = []
+        blue_offboard = []
+
+        for unit in self.redArmy.army:
+            print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
+            print("self.isMovable(unit): ", self.isMovable(unit))
+
+            if unit.isOffBoard() == False:
+                x, y = unit.getPosition()
+                state[x, y, 0] = 180.0
+                state[x, y, 1] = 180.0
+                state[x, y, 2] = int(unit.rank * 10)
+            else:
+                #print("unit: ", unit)
+                red_offboard.append(unit.rank)
+
+        for unit in self.blueArmy.army:
+            if unit.isOffBoard() == False:
+                x, y = unit.getPosition()
+                state[x, y, 0] = 30.0
+                state[x, y, 1] = 30.0
+                state[x, y, 2] = float(unit.rank * 10)
+            else:
+                blue_offboard.append(unit.rank)
+
+        observation = {
+            'battle_field': state,
+            'red_offboard': red_offboard,
+            'blue_offboard': blue_offboard,
+            'movable_units' : movable_units
+        }
+
+        return observation
         
     def reset(self):
         self.newGame()
-
-        self.state = {
-            'alertness': 0,
-            'hypertension': 0,
-            'intoxication': 0,
-            'time_since_slept': 0,
-            'time_elapsed': 0,
-            'work_done': 0
-        }
-        
-        wakeup(self.state)
 
         return self.observation()
         
     def step(self, action):
         self.step_phase = 0
         while True:
-            self.render()
-            #print("self.step_phase: ", self.step_phase)
+            self.update_screen()
 
             if self.step_phase == 3:
                 reward = 0
@@ -212,7 +149,6 @@ class StrategoEnv(gym.Env):
                             self.clickedUnit = None
                             self.step_phase = 1
                         else:
-                            print("1")
                             result = self.moveUnit(x, y)
                             unit.selected = False
                             self.step_phase = 3
@@ -221,7 +157,6 @@ class StrategoEnv(gym.Env):
 
                             return self.observation(), self.reward, self.done, self.step_phase
                     elif self.unit_selected == True and self.clickedUnit:
-                        print("2")
                         result = self.moveUnit(x, y)
                         self.clickedUnit.selected = False
                         self.unit_selected = False
@@ -229,8 +164,6 @@ class StrategoEnv(gym.Env):
                         self.step_phase = 3
 
                         return self.observation(), self.reward, self.done, self.step_phase
-
-        pygame.display.update()
 
         return self.observation(), self.reward, self.done, self.step_phase
 
@@ -558,6 +491,9 @@ class StrategoEnv(gym.Env):
         if x >= self.boardWidth or y >= self.boardWidth or x < 0 or y < 0:
             return False
 
+        if unit.color == "Red" and self.redArmy.getUnit(x, y):
+            return False
+
         #if not self.started:
         #    if y < (self.boardWidth - 4):
         #        return False
@@ -637,11 +573,6 @@ class StrategoEnv(gym.Env):
 
     def drawSidePanels(self):
         """Draw the unplaced units in the sidebar widget."""
-        #self.blueUnitPanel.delete(tk.ALL)
-        #self.redUnitPanel.delete(tk.ALL)
-        #self.blueUnitPanel.create_rectangle(0, 0, 10 * self.tilePix, 4 * self.tilePix, fill=UNIT_PANEL_COLOR)
-        #self.redUnitPanel.create_rectangle(0, 0, 10 * self.tilePix, 4 * self.tilePix, fill=UNIT_PANEL_COLOR)
-
         unplacedRed = 0
         for unit in sorted(self.redArmy.army, key=lambda x: x.sortOrder):
             if unit.isOffBoard():
@@ -661,7 +592,7 @@ class StrategoEnv(gym.Env):
                 self.drawUnit(self.BLUE_SIDE_SCREEN, unit, x, y)
                 unplacedBlue += 1
 
-    def render(self, mode=None):
+    def update_screen(self):
         blockSize = self.armyHeight # Set the size of the grid block
         self.BATTLE_SCREEN.blit(self.grass_image, (0, 0))
 
@@ -694,4 +625,5 @@ class StrategoEnv(gym.Env):
 
         pygame.display.update()
 
-        self.log = ''
+    def render(self, mode=None):
+        self.update_screen()

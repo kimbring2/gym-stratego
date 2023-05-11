@@ -116,6 +116,7 @@ class Unit:
         self.possibleMovableRanks = []
         self.possibleUnmovableRanks = []
         self.selected = False
+        self.tag_number = 0
 
     def getPosition(self):
         return self.position
@@ -263,7 +264,7 @@ class Spy(Unit):
 
 class Bomb(Unit):
     name = "Bomb"
-    rank = 99
+    rank = 11
     sortOrder = 11
 
     canMove = False

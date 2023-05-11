@@ -160,8 +160,10 @@ class Brain(Brain.Brain):
                     scoutPos += [(column, frontrow)]
                 positions.remove((column, frontrow))
                 
-        for unit in self.army.army:
+        for i, unit in enumerate(self.army.army):
             if unit.isOffBoard():
+                unit.tag_number = i
+
                 if unit.name == 'Flag':
                     unit.position = flagPos
                 elif unit.name == 'Bomb' and bombPos:
