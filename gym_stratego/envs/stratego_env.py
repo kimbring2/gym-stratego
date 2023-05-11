@@ -15,31 +15,40 @@ BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not mod
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
+
 def heart_attack_risk(hypertension, heart_attack_proclivity=0.5):
     return heart_attack_proclivity * sigmoid(hypertension - 6)
+
 
 def heart_attack_occured(state, heart_attack_proclivity=0.5):
     return np.random.uniform(0, 1) < heart_attack_risk(state['hypertension'], heart_attack_proclivity)
 
+
 def alertness_decay(time_since_slept):
     return sigmoid((time_since_slept - 40) / 10)
+
 
 def crippling_anxiety(alertness):
     return sigmoid(alertness - 3)
 
+
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
+
 def ballmer_function(intoxication):
     return sigmoid((0.05 - intoxication) * 50) + 2 * gaussian(intoxication, 0.135, 0.005)
+
 
 def wakeup(state):
     state['alertness'] = np.random.uniform(0.7, 1.3)
     state['time_since_slept'] = 0
 
+
 def drink_coffee(state):
     state['alertness'] += np.random.uniform(0, 1)
     state['hypertension'] += np.random.uniform(0, 0.3)
+
 
 def drink_beer(state):
     state['alertness'] -= np.random.uniform(0, 0.5)
@@ -50,6 +59,7 @@ def drink_beer(state):
 decay_rate = 0.97
 half_life = decay_rate ** 24
 
+
 def half_hour_passed(state):
     state['alertness'] -= alertness_decay(state['time_since_slept'])
     state['hypertension'] = decay_rate * state['hypertension']
@@ -57,25 +67,32 @@ def half_hour_passed(state):
     state['time_since_slept'] += 1
     state['time_elapsed'] += 1
 
+
 def productivity(state):
     p = 1
     p *= state['alertness']
     p *= 1 - crippling_anxiety(state['alertness'])
     p *= ballmer_function(state['intoxication'])
+
     return p
+
 
 def work(state):
     state['work_done'] += productivity(state)
     half_hour_passed(state)
 
+
 def do_nothing(state):
     pass
+
 
 def sleep(state):
     """Have 16 half-hours of healthy sleep"""
     for hh in range(16):
         half_hour_passed(state)
+
     wakeup(state)
+
 
 def make_heartpole_obs_space(observations):
     lower_obs_bound = {
@@ -130,9 +147,6 @@ class StrategoEnv(gym.Env):
         DEFAULT_IMAGE_SIZE = (self.tilePix, self.tilePix)
         self.water_image = pygame.transform.scale(waterImage, DEFAULT_IMAGE_SIZE)
 
-        self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
-        self.redArmy = Army("classical", "Red", self.boardWidth * self.armyHeight)
-
         self.BLACK = (0, 0, 0)
         self.WHITE = (200, 200, 200)
 
@@ -143,25 +157,16 @@ class StrategoEnv(gym.Env):
         CLOCK = pygame.time.Clock()
         self.SCREEN.fill(self.BLACK)
 
-        tempBrain = randomBrain.Brain(self, self.redArmy, self.boardWidth)
-        tempBrain.placeArmy(self.armyHeight)
+        #self.newGame()
 
-        self.redBrain = 0
-        self.blueBrain = eval("SmartBrain")
-
-        self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
-        self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
-                       "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
-
-        self.brains["Blue"].placeArmy(self.armyHeight)
-
-        self.unit_selected = False
-        self.clickedUnit = None
+        self.done = False
 
     def observation(self):
         return np.array([self.state[o] for o in self.observations])
         
     def reset(self):
+        self.newGame()
+
         self.state = {
             'alertness': 0,
             'hypertension': 0,
@@ -198,11 +203,12 @@ class StrategoEnv(gym.Env):
                     else:
                         result = self.moveUnit(x, y)
                 elif self.unit_selected == True and self.clickedUnit:
-                    #print("self.unit_selected == True and self.clickedUnit")
+                    print("self.unit_selected == True and self.clickedUnit")
                     result = self.moveUnit(x, y)
                     self.clickedUnit.selected = False
                     self.unit_selected = False
                     self.clickedUnit = None
+                    #self.endTurn()
 
                 if unit:
                     if unit.color == "Blue":
@@ -245,11 +251,38 @@ class StrategoEnv(gym.Env):
 
         pygame.display.update()
 
-        return self.observation(), reward, False, {}
+        return self.observation(), reward, self.done, {}
     
     def close(self):
         pass
-        
+       
+    def newGame(self, event=None):
+        self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
+        self.redArmy = Army("classical", "Red", self.boardWidth * self.armyHeight)
+
+        tempBrain = randomBrain.Brain(self, self.redArmy, self.boardWidth)
+        tempBrain.placeArmy(self.armyHeight)
+
+        self.redBrain = 0
+        self.blueBrain = eval("SmartBrain")
+
+        self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
+        self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
+                       "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
+
+        self.brains["Blue"].placeArmy(self.armyHeight)
+
+        self.unit_selected = False
+        self.clickedUnit = None
+
+        self.firstMove = "Red"
+        self.turn = self.firstMove
+        self.won = False
+        self.turnNr = 1
+        self.difficulty = "Normal"
+        self.started = True
+        self.done = False
+
     def isPool(self, x, y):
         """Check whether there is a pool at tile (x,y)."""
         # uneven board size + middle row or even board size + middle 2 rows
@@ -282,7 +315,7 @@ class StrategoEnv(gym.Env):
         dy = y - j
 
         target = self.getUnit(x, y)
-        print("target: ", target)
+        #print("target: ", target)
         if target:
             if target.color == self.clickedUnit.color:
                 print("You can't move there - tile already occupied!")
@@ -295,10 +328,10 @@ class StrategoEnv(gym.Env):
                     #self.movingUnit = None
             else:
                 self.attack(self.clickedUnit, target)
-                #if self.started:
-                #    self.endTurn()
+                if self.started:
+                    self.endTurn()
 
-            #return
+            return
         else:
             print("Moved %s to (%s, %s)" % (self.clickedUnit, x, y))
             if (abs(self.clickedUnit.position[0] - x) + abs(self.clickedUnit.position[1] - y)) > 1 and self.clickedUnit.hasMovedFar != True:
@@ -328,6 +361,52 @@ class StrategoEnv(gym.Env):
 
         #self.clickedUnit = None
         #self.movingUnit = False
+        if self.started:
+            self.endTurn()
+
+    def victory(self, color, noMoves=False):
+        #print("victory()")
+
+        """Show the victory/defeat screen"""
+        self.won = True
+        #self.drawMap()
+        #top = Toplevel(width=300)
+        #setIcon(top, "flag")
+        #flagimg1 = Image.open("%s/%s.%s" % (ICON_DIR, "flag", ICON_TYPE))
+        #flagimg2 = ImageTk.PhotoImage(flagimg1)
+        #lbl = Label(top, image=flagimg2)
+        #lbl.image = flagimg2
+        #lbl.grid(row=0, column=1, sticky=tk.NW)
+
+        if color == "Red":
+            #top.title("Victory!")
+            if noMoves:
+                messageTxt = "The enemy army has been immobilized. Congratulations, you win!"
+            else:
+                messageTxt = "Congratulations! You've captured the enemy flag!"
+        else:
+            #top.title("Defeat!")
+            if noMoves:
+                messageTxt = "There are no valid moves left. You lose."
+            else:
+                messageTxt = "Unfortunately, the enemy has captured your flag. You lose."
+
+        casualties = len(self.redArmy.army) - self.redArmy.nrAlive()
+        #self.stats.addGame(color == "Red", casualties, self.turnNr)
+        #message = Label(top, text=messageTxt)
+        #message.grid(row=0, column=0, sticky=tk.NE, ipadx=15, ipady=50)
+
+        #ok = Button(top, text="OK", command=top.destroy)
+        #ok.grid(row=1, column=0, columnspan=2, ipadx=15, ipady=5, pady=5)
+
+        #message.configure(width=40, justify=CENTER, wraplength=150)
+        print("%s has won the game in %i turns!" % (color, self.turnNr))
+        #if color == "Red":
+        #    self.playSound(SOUND_WIN)
+        #else:
+        #    self.playSound(SOUND_LOSE)
+
+        self.done = True
 
     def attack(self, attacker, defender):
         """Show the outcome of an attack and remove defeated pieces from the board"""
@@ -382,7 +461,7 @@ class StrategoEnv(gym.Env):
         if defender.name == "Flag":
             attacker.position = defender.position
             defender.die()
-            #self.victory(attacker.color)
+            self.victory(attacker.color)
 
         elif attacker.canDefuseBomb and defender.name == "Bomb":
             attacker.position = defender.position
@@ -440,6 +519,67 @@ class StrategoEnv(gym.Env):
             text += "The %s was defeated." % attacker.name
 
         print("text: ", text)
+
+    def otherPlayer(self, color):
+        """Return opposite color"""
+        if color == "Red": 
+            return "Blue"
+
+        return "Red"
+
+    def otherArmy(self, color):
+        """Return opposite army"""
+        if color == "Red": 
+            return self.blueArmy
+
+        return self.redArmy
+
+    def endTurn(self):
+        print("endTurn()")
+
+        """Switch turn to other player and check for end of game conditions"""
+        self.turn = self.otherPlayer(self.turn)
+        self.turnNr += 1
+
+        if self.brains[self.turn] and not self.won:  # computer player?
+            (oldlocation, move) = self.brains[self.turn].findMove()
+
+            # check if the opponent can move
+            if move == None:
+                self.victory(self.otherPlayer(self.turn), True)
+                return
+
+            unit = self.getUnit(oldlocation[0], oldlocation[1])
+            unit.hasMoved = True
+
+            print("unit: ", unit)
+
+            # Do move animation
+            stepSize = self.tilePix / MOVE_ANIM_STEPS
+            dx = move[0] - oldlocation[0]
+            dy = move[1] - oldlocation[1]
+
+            enemy = self.getUnit(move[0], move[1])
+            if enemy:
+                self.attack(unit, enemy)
+            else:
+                unit.setPosition(move[0], move[1])
+
+            # check if player can move
+            tempBrain = randomBrain.Brain(self, self.redArmy, self.boardWidth)
+            playerMove = tempBrain.findMove()
+            if playerMove[0] == None:
+                self.victory(self.turn, True)
+                return
+
+            if self.difficulty == "Easy":
+                for unit in self.redArmy.army:
+                    if unit.isKnown and random() <= FORGETCHANCEEASY:
+                        unit.isKnown = False
+
+            print("%s moves unit at (%s,%s) to (%s,%s)" % (self.turn, oldlocation[0], oldlocation[1], move[0], move[1]))
+
+        self.turn = self.otherPlayer(self.turn)
 
     def legalMove(self, unit, x, y):
         if self.isPool(x, y):

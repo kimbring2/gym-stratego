@@ -186,7 +186,9 @@ class Brain(Brain.Brain):
         defuseBombMoves = []
         notMovedKillingMoves = []
         notMovedNotKillingMoves = []
-        order = range(len(self.army.army))
+        order = list(range(len(self.army.army)))
+        #print("order: ", order)
+
         shuffle(order)
         enemyArmy = self.game.otherArmy(self.army.color)
         highestUnknown = enemyArmy.highestUnknown()
@@ -201,7 +203,7 @@ class Brain(Brain.Brain):
             (col, row) = unit.getPosition()
 
             if unit.walkFar:
-                dist = range(1, BOARD_WIDTH)
+                dist = list(range(1, BOARD_WIDTH))
                 shuffle(dist)
             else:
                 dist = [1]
