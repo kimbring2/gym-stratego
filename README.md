@@ -70,5 +70,6 @@ It is possible to play the game manually. Please change the ```env.step(action)`
 observation, reward, done, step_phase = env.step_render()
 ```
 
+Below is demo video for that.
 [![human play](https://img.youtube.com/vi/QlrTqNp1R3U/sddefault.jpg)](https://youtu.be/QlrTqNp1R3U "Play as human video - Click to Watch!")
 <strong>Click to Watch!</strong>
