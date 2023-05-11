@@ -159,13 +159,6 @@ class StrategoEnv(gym.Env):
         self.BLUE_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
 
         CLOCK = pygame.time.Clock()
-        self.MAIN_SCREEN.fill(self.BLACK)
-        self.RED_SIDE_SCREEN.fill(self.WHITE)
-        self.BLUE_SIDE_SCREEN.fill(self.WHITE)
-
-        pygame.draw.line(self.RED_SIDE_SCREEN, (0, 0, 0), (0, 0), (self.boardsize, 0))
-
-        self.done = False
 
     def observation(self):
         return np.array([self.state[o] for o in self.observations])
@@ -187,75 +180,60 @@ class StrategoEnv(gym.Env):
         return self.observation()
         
     def step(self, action):
-        event_list = pygame.event.get()
-        for event in event_list:
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                x = int(event.pos[0] / self.tilePix)
-                y = int(event.pos[1] / self.tilePix)
+        self.step_phase = 0
+        while True:
+            self.render()
+            #print("self.step_phase: ", self.step_phase)
 
-                unit = self.getUnit(x, y)
+            if self.step_phase == 3:
+                reward = 0
+                break
 
-                if self.unit_selected == False and unit:
-                    unit.selected = True
-                    self.unit_selected = True
-                    self.clickedUnit = unit
-                elif self.unit_selected == True and unit:
-                    if unit.selected == True:
-                        unit.selected = False
-                        self.unit_selected = False
-                        self.clickedUnit = None
-                    else:
+            event_list = pygame.event.get()
+            for event in event_list:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    x = int(event.pos[0] / self.tilePix)
+                    y = int(event.pos[1] / self.tilePix)
+
+                    unit = self.getUnit(x, y)
+
+                    if self.unit_selected == False and unit:
+                        if unit.color == "Red":
+                            unit.selected = True
+                            self.unit_selected = True
+                            self.clickedUnit = unit
+                            self.step_phase = 2
+
+                            return self.observation(), self.reward, self.done, self.step_phase
+                    elif self.unit_selected == True and unit:
+                        if unit.selected == True and unit.color == "Red":
+                            unit.selected = False
+                            self.unit_selected = False
+                            self.clickedUnit = None
+                            self.step_phase = 1
+                        else:
+                            print("1")
+                            result = self.moveUnit(x, y)
+                            unit.selected = False
+                            self.step_phase = 3
+                            self.unit_selected = False
+                            self.clickedUnit = None
+
+                            return self.observation(), self.reward, self.done, self.step_phase
+                    elif self.unit_selected == True and self.clickedUnit:
+                        print("2")
                         result = self.moveUnit(x, y)
-                elif self.unit_selected == True and self.clickedUnit:
-                    print("self.unit_selected == True and self.clickedUnit")
-                    result = self.moveUnit(x, y)
-                    self.clickedUnit.selected = False
-                    self.unit_selected = False
-                    self.clickedUnit = None
-
-                if unit:
-                    if unit.color == "Blue":
-                        #print("You clicked an enemy unit at (%s, %s)" % (x, y))
                         self.clickedUnit.selected = False
                         self.unit_selected = False
                         self.clickedUnit = None
-                    else:
-                        if unit.isMovable():
-                            self.movingUnit = True
-                            self.clickedUnit = unit
-                            self.drawUnit(self.BATTLE_SCREEN, unit, x, y, SELECTED_RED_PLAYER_COLOR)
+                        self.step_phase = 3
 
-        if self.state['time_elapsed'] == 0:
-            old_score = 0
-        else:
-            old_score = self.state['work_done'] / self.state['time_elapsed']
-        
-        # Do selected action
-        self.actions[action](self.state)
-        self.log += f'Chosen action: {self.actions[action].__name__}\n'
-        
-        # Do work
-        work(self.state)
-        
-        new_score = self.state['work_done'] / self.state['time_elapsed']
-        
-        reward = new_score - old_score
-        
-        if heart_attack_occured(self.state, self.heart_attack_proclivity):
-            # We would like to avoid this
-            self.log += 'HEART_ATTACK\n'
-            reward -= 100
-
-            # A heart attack is like purgatory - painful, but cleansing
-            # You can tell I am not a doctor
-            self.state['hypertension'] = 0
-
-        self.log += str(self.state) + '\n'
+                        return self.observation(), self.reward, self.done, self.step_phase
 
         pygame.display.update()
 
-        return self.observation(), reward, self.done, {}
-    
+        return self.observation(), self.reward, self.done, self.step_phase
+
     def close(self):
         pass
        
@@ -284,7 +262,15 @@ class StrategoEnv(gym.Env):
         self.turnNr = 1
         self.difficulty = "Normal"
         self.started = True
+
         self.done = False
+        self.step_phase = 1
+        self.reward = (0, 0)
+
+        #self.MAIN_SCREEN.fill(self.BLACK)
+        self.RED_SIDE_SCREEN.fill(self.WHITE)
+        self.BLUE_SIDE_SCREEN.fill(self.WHITE)
+        pygame.draw.line(self.RED_SIDE_SCREEN, (0, 0, 0), (0, 0), (self.boardsize, 0))
 
     def isPool(self, x, y):
         """Check whether there is a pool at tile (x,y)."""
@@ -317,6 +303,8 @@ class StrategoEnv(gym.Env):
         dx = x - i
         dy = y - j
 
+        self.clickedUnit.unit_selected = False
+        self.clickedUnit.selected = False
         target = self.getUnit(x, y)
         if target:
             if target.color == self.clickedUnit.color:
@@ -372,11 +360,15 @@ class StrategoEnv(gym.Env):
                 messageTxt = "The enemy army has been immobilized. Congratulations, you win!"
             else:
                 messageTxt = "Congratulations! You've captured the enemy flag!"
+
+            self.reward = (1, 0)
         else:
             if noMoves:
                 messageTxt = "There are no valid moves left. You lose."
             else:
                 messageTxt = "Unfortunately, the enemy has captured your flag. You lose."
+
+            self.reward = (0, 1)
 
         casualties = len(self.redArmy.army) - self.redArmy.nrAlive()
         print("%s has won the game in %i turns!" % (color, self.turnNr))
@@ -484,13 +476,19 @@ class StrategoEnv(gym.Env):
             attacker.die()
             defender.die()
             text += "Both units died."
+
+            #attackerArmy.unit_selected = False
+            #defenderArmy.unit_selected = False
         else:
             attackerArmy.nrOfLiving -= 1
             attackerArmy.nrOfMoved -= 1
             attacker.die()
             text += "The %s was defeated." % attacker.name
 
-        #print("text: ", text)
+        attacker.unit_selected = False
+        defender.unit_selected = False
+
+        print("text: ", text)
 
     def otherPlayer(self, color):
         """Return opposite color"""
@@ -617,19 +615,20 @@ class StrategoEnv(gym.Env):
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
         screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
-        if unit.selected:
-            pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
-                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
-        else:
-            pygame.draw.rect(self.BATTLE_SCREEN, color, 
-                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+        if unit.alive:
+            if unit.selected:
+                pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
+                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
+            else:
+                pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
 
         if unit.name != "Bomb" and unit.name != "Flag":
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
             screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
 
         if not unit.alive:
-            pygame.draw.line(screen, (0, 0, 0), (x * self.tilePix, y * self.tilePix), ((y + 1) * self.tilePix, (y + 1) * self.tilePix))
+            pygame.draw.line(screen, (0, 0, 0), (x * self.tilePix, y * self.tilePix), ((x + 1) * self.tilePix, (y + 1) * self.tilePix))
             pygame.draw.line(screen, (0, 0, 0), (x * self.tilePix, (y + 1) * self.tilePix), ((x + 1) * self.tilePix, y * self.tilePix))
 
     def offBoard(self, x):
