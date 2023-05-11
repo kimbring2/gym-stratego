@@ -9,8 +9,11 @@ $ pip install -e .
 ```
 
 # OpenAI Gym Sequence
+Unlike the other game like a Pong, the Stratego has a multipl unit. Therefore, the step process consist of two phase.
 
 <img src="images/game_rule.png" width="800">
+
+At the first phase, you should select one of your unit. The selected unit has the bold boundary line. At the second phase, you need to decide the possition where the selectec unit of first phase will move to. Additionally, you can see the the dead unit of player and opponent at the right side panel.
 
 # Observation and Action
 | State |  Format |
@@ -22,58 +25,7 @@ $ pip install -e .
 | movable_positions | The x, y coordinate of battle field where the selected unit of player can move for next turn. E.g. [(6, 3), (7, 2), (8, 3)] |
 
 # Example Code
-After installing, run below code.
-```
-import gym
-import time
-import cv2
-import numpy as np
-import random
-
-env = gym.make("gym_stratego.envs:stratego-v0")
-
-for episode in range(0, 10000):
-    observation, reward, done, step_phase = env.reset()
-    battle_field = observation['battle_field']  / 255.0
-    red_offboard = observation['red_offboard']
-    blue_offboard = observation['blue_offboard']
-    movable_units = observation['movable_units']
-    clicked_unit = observation['clicked_unit']
-    movable_positions = observation['movable_positions']
-    while True:
-        print("step: ", step)
-        #cv2.imshow('battle_field', battle_field)
-        #cv2.waitKey(1)
-
-        print("step_phase: ", step_phase)
-
-        #env.render()
-        if step_phase == 1:
-            select_unit_tag = random.choice(movable_units)
-            select_unit = env.get_unit_from_tag(select_unit_tag)
-            print("select_unit: ", select_unit)
-
-            (x, y) = select_unit.position
-            observation, reward, done, step_phase = env.step((x, y))
-        elif step_phase == 2:
-            select_position = random.choice(movable_positions)
-            print("select_position: ", select_position)
-            observation, reward, done, step_phase = env.step(select_position)
-        
-        battle_field = observation['battle_field'] / 255.0
-        red_offboard = observation['red_offboard']
-        blue_offboard = observation['blue_offboard']
-        movable_units = observation['movable_units']
-        clicked_unit = observation['clicked_unit']
-        movable_positions = observation['movable_positions']
-
-        if done:
-            break
-
-        time.sleep(1)
-        
-env.close()
-```
+Please run the env_test.py file for that.
 
 # Play as human
 It is possible to play the game manually. Please change the ```env.step(action)``` part as below one.
