@@ -17,7 +17,8 @@ class StrategoEnv(gym.Env):
         size = "Normal"
         self.boardWidth = SIZE_DICT[size][0]
         self.pools = SIZE_DICT[size][1]
-        self.tilePix = SIZE_DICT[size][2]
+        #self.tilePix = SIZE_DICT[size][2]
+        self.tilePix = 120
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
         self.diagonal = False
@@ -182,7 +183,7 @@ class StrategoEnv(gym.Env):
 
         return self.observation(), self.reward, self.done, self.step_phase
 
-    def step_render(self, action):
+    def step_render(self):
         while True:
             self.update_screen()
 
@@ -580,13 +581,7 @@ class StrategoEnv(gym.Env):
 
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
 
-        if unit.color == 'Red':
-            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
-
-        if unit.color == 'Blue' and not unit.alive:
-            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)    
-
-        if unit.alive and unit.color == 'Red':
+        if unit.alive and unit.color == 'Red' :
             if unit.selected:
                 pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
@@ -594,10 +589,20 @@ class StrategoEnv(gym.Env):
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
         elif unit.alive and unit.color == 'Blue':
-            pygame.draw.rect(self.BATTLE_SCREEN, color, 
-                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)))
+            if unit.isKnown == False:
+                pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                                pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)))
+            else:
+                pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
 
-        if unit.name != "Bomb" and unit.name != "Flag" and unit.color == 'Red':
+        if unit.color == 'Red':
+            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
+
+        if (unit.color == 'Blue' and not unit.alive) or unit.isKnown:
+            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
+
+        if (unit.name != "Bomb" and unit.name != "Flag" and unit.color == 'Red') or unit.isKnown:
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
             screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
 
@@ -634,11 +639,6 @@ class StrategoEnv(gym.Env):
         blockSize = self.armyHeight # Set the size of the grid block
         self.BATTLE_SCREEN.blit(self.grass_image, (0, 0))
 
-        for i in range(self.boardWidth - 1):
-            x = self.tilePix * (i + 1)
-            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (x, 0), (x, self.boardsize))
-            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (0, x), (self.boardsize, x))
-
         for x in range(self.boardWidth):
             for y in range(self.boardWidth):
                 if self.isPool(x, y):
@@ -654,6 +654,11 @@ class StrategoEnv(gym.Env):
             if unit.alive:
                 (x, y) = unit.getPosition()
                 self.drawUnit(self.BATTLE_SCREEN, unit, x, y)
+
+        for i in range(self.boardWidth - 1):
+            x = self.tilePix * (i + 1)
+            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (x, 0), (x, self.boardsize))
+            pygame.draw.line(self.BATTLE_SCREEN, (0, 0, 0), (0, x), (self.boardsize, x))
 
         self.drawSidePanels()
 
