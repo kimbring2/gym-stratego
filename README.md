@@ -1,5 +1,7 @@
 # Introduction
-An OpenAI Gym for Stratego board game to benchmark Reinforcement Learning algorithms
+An OpenAI Gym for the Python implementaion of the [Stratego board game](https://github.com/JeroenKools/gpfj) to benchmark Reinforcement Learning algorithms. Thank you for the [JeroenKools](https://github.com/JeroenKools).
+
+
 
 # Install
 ```
@@ -62,3 +64,11 @@ for episode in range(0, 10000):
 env.close()
 ```
 
+# Play as human
+It is possible to play the game manually. Please change the ```env.step(action)``` part as below one.
+```
+observation, reward, done, step_phase = env.step_render()
+```
+
+[![human play]([https://img.youtube.com/vi/avQra5Wt-wI/sddefault.jpg](https://i3.ytimg.com/vi/yHqzAhBBAwE/hqdefault.jpg))](https://youtu.be/yHqzAhBBAwE "Play as human video - Click to Watch!")
+<strong>Click to Watch!</strong>
