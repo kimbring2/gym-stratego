@@ -1,13 +1,14 @@
 # Introduction
 An OpenAI Gym for the Python implementaion of the [Stratego board game](https://github.com/JeroenKools/gpfj) to benchmark Reinforcement Learning algorithms. Thank you for the [JeroenKools](https://github.com/JeroenKools).
 
+The DeepMind uses the Stratego game as enviroment at the paper titled [Mastering Stratego, the classic game of imperfect information](https://www.deepmind.com/blog/mastering-stratego-the-classic-game-of-imperfect-information). At this paper, they used the algorithm called DeepNash to find the Nash equilibrium when training the agent using Deep Reinformance Learning. 
+
 # Install
 ```
 $ git clone https://github.com/kimbring2/gym-stratego
 $ cd gym-stratego
 $ pip install -e .
 ```
-
 # OpenAI Gym Sequence
 Unlike the other game like a Pong, the Stratego has a multipl unit. Therefore, the step process consist of two phase.
 
