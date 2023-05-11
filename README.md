@@ -28,10 +28,7 @@ At the first phase, you should select one of your unit. The selected unit has th
 Please run the env_test.py file for that.
 
 # Play as human
-It is possible to play the game manually. Please change the ```env.step(action)``` part as below one.
-```
-observation, reward, done, step_phase = env.step_render()
-```
+It is possible to play the game manually. Please change the ```env.step(action)``` part as of code as ```env.step_render()```.
 
 Below is demo video for that.
 [![human play](https://img.youtube.com/vi/QlrTqNp1R3U/sddefault.jpg)](https://youtu.be/QlrTqNp1R3U "Play as human video - Click to Watch!")
