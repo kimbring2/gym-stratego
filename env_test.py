@@ -30,7 +30,7 @@ while True:
         print("step: ", step)
 
         #env.render()
-
+        #action = 0
         #observation, reward, done, step_phase = env.step_render(action)
         if step_phase == 1:
             select_unit_tag = random.choice(movable_units)
@@ -43,7 +43,7 @@ while True:
             select_position = random.choice(movable_positions)
             print("select_position: ", select_position)
             observation, reward, done, step_phase = env.step(select_position)
-
+        
         battle_field = observation['battle_field'] / 255.0
         red_offboard = observation['red_offboard']
         blue_offboard = observation['blue_offboard']

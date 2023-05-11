@@ -103,10 +103,8 @@ class StrategoEnv(gym.Env):
                 state[x, y, 1] = 180.0
                 state[x, y, 2] = int(unit.rank * 10)
             else:
-                #print("unit: ", unit)
                 red_offboard.append(unit.rank)
 
-            #print("unit: ", unit)
             if unit.isOffBoard() == False:
                 if self.is_movable(unit):
                     movable_units.append(unit.tag_number)
@@ -116,7 +114,7 @@ class StrategoEnv(gym.Env):
                 x, y = unit.getPosition()
                 state[x, y, 0] = 30.0
                 state[x, y, 1] = 30.0
-                state[x, y, 2] = float(unit.rank * 10)
+                state[x, y, 2] = 30.0
             else:
                 blue_offboard.append(unit.rank)
 
@@ -178,8 +176,6 @@ class StrategoEnv(gym.Env):
             self.clicked_unit = None
             self.step_phase = 1
 
-        #return self.observation(), self.reward, self.done, self.step_phase
-
     def step(self, action):
         self.update_screen()
         self.move_unit(action[0], action[1])
@@ -190,12 +186,10 @@ class StrategoEnv(gym.Env):
         while True:
             self.update_screen()
 
-            #print("self.step_phase: ", self.step_phase)
             if self.step_phase == 3:
                 self.step_phase = 1
                 break
             elif self.step_phase == 2:
-                #print("self.unit_selected: ", self.unit_selected)
                 pass
 
             event_list = pygame.event.get()
@@ -207,40 +201,6 @@ class StrategoEnv(gym.Env):
                     print("(%d, %d)" % (x, y))
                     self.move_unit(x, y)
                     return self.observation(), self.reward, self.done, self.step_phase
-                    '''
-                    unit = self.getUnit(x, y)
-                    
-                    if self.unit_selected == False and unit:
-                        if unit.color == "Red":
-                            unit.selected = True
-                            self.unit_selected = True
-                            self.clicked_unit = unit
-                            self.step_phase = 2
-
-                            return self.observation(), self.reward, self.done, self.step_phase
-                    elif self.unit_selected == True and unit:
-                        if unit.selected == True and unit.color == "Red":
-                            unit.selected = False
-                            self.unit_selected = False
-                            self.clicked_unit = None
-                            self.step_phase = 1
-                        else:
-                            result = self.moveUnit(x, y)
-                            unit.selected = False
-                            self.step_phase = 3
-                            self.unit_selected = False
-                            self.clicked_unit = None
-
-                            return self.observation(), self.reward, self.done, self.step_phase
-                    elif self.unit_selected == True and self.clicked_unit:
-                        result = self.moveUnit(x, y)
-                        self.clicked_unit.selected = False
-                        self.unit_selected = False
-                        self.clicked_unit = None
-                        self.step_phase = 3
-
-                        return self.observation(), self.reward, self.done, self.step_phase
-                    '''
 
         return self.observation(), self.reward, self.done, self.step_phase
 
@@ -619,17 +579,25 @@ class StrategoEnv(gym.Env):
         #print("unit.name: %s, x: %d, y: %d, unit.color: %s" % (unit.name, x, y, unit.color))
 
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
-        screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
-        if unit.alive:
+        if unit.color == 'Red':
+            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
+
+        if unit.color == 'Blue' and not unit.alive:
+            screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)    
+
+        if unit.alive and unit.color == 'Red':
             if unit.selected:
                 pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
             else:
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+        elif unit.alive and unit.color == 'Blue':
+            pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                             pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)))
 
-        if unit.name != "Bomb" and unit.name != "Flag":
+        if unit.name != "Bomb" and unit.name != "Flag" and unit.color == 'Red':
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
             screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
 
