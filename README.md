@@ -14,11 +14,11 @@ $ pip install -e .
 # OpenAI Gym Sequence
 Unlike the other game like a Pong, the Stratego has a multipl unit. Therefore, the step process consist of three phase. At the first phase, you should select one of your unit. At the second phase, the selected unit has the bold boundary line. At the third phase you need to decide the possition where the selectec unit of first phase will move to. 
 
-<img src="images/game_rule_1.png" width="800">
+<img src="images/game_rule_1.png" width="600">
 
 At the start of game, player have no information about rank of opponent unut. However, the rank unit that is engaged in battle and survive is revealed to player.
 
-<img src="images/game_rule_2.png" width="800">
+<img src="images/game_rule_2.png" width="600">
 
 Additionally, you can see the the dead unit of player and opponent at the right side panel. 
 
