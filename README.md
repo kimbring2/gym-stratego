@@ -5,6 +5,10 @@ An OpenAI Gym for the Python implementaion of the [Stratego board game](https://
 
 The DeepMind uses the Stratego game as enviroment at the paper titled [Mastering Stratego, the classic game of imperfect information](https://www.deepmind.com/blog/mastering-stratego-the-classic-game-of-imperfect-information). At this paper, they used the algorithm called DeepNash to find the Nash equilibrium when training the agent using Deep Reinformance Learning. 
 
+# Reference
+- Custom OpenAI Gym code: https://github.com/vadim0x60/heartpole
+- Python2 implementation of Stratego game: https://github.com/JeroenKools/gpfj
+
 # Install
 ```
 $ git clone https://github.com/kimbring2/gym-stratego
