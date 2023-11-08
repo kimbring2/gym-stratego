@@ -2,7 +2,9 @@ from gym_stratego.envs.constants import *
 from tkinter import PhotoImage
 from PIL import Image, ImageTk
 import pygame
+import os
 
+dirname = os.path.dirname(__file__)
 
 class Army:
     ranks = ['marshal', 'general', 'colonel', 'major', 'captain',
@@ -155,7 +157,7 @@ class Icons:
             #icon = icon.resize((2 * tilepix, 2 * tilepix), Image.BICUBIC)
             #icon = icon.resize((tilepix, tilepix), Image.ANTIALIAS)
             #self.icons[rank] = ImageTk.PhotoImage(icon)
-            icon = pygame.image.load("gym_stratego/envs/%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+            icon = pygame.image.load("%s/%s/%s.%s" % (dirname, ICON_DIR, rank.lower(), ICON_TYPE))
             DEFAULT_IMAGE_SIZE = (tilepix, tilepix)
             self.icons[rank] = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)
 
@@ -166,7 +168,7 @@ class Icons:
         #img = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
         #img = img.resize((2 * size, 2 * size), Image.BICUBIC)
         #img = img.resize((size, size), Image.ANTIALIAS)
-        img = pygame.image.load("gym_stratego/envs/%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
+        img = pygame.image.load("%s/%s/%s.%s" % (dirname, ICON_DIR, rank.lower(), ICON_TYPE))
         DEFAULT_IMAGE_SIZE = (size, size)
         img = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)
 

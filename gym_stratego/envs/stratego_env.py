@@ -9,7 +9,10 @@ from gym_stratego.envs.Army import Army, Icons
 import gym_stratego.envs.explosion
 from gym_stratego.envs.constants import *
 from gym_stratego.envs.brains import *
+import os
+
 BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
+dirname = os.path.dirname(__file__)
 
 
 class StrategoEnv(gym.Env):
@@ -25,11 +28,11 @@ class StrategoEnv(gym.Env):
 
         self.unitIcons = Icons(self.tilePix)
 
-        grassImage = pygame.image.load("gym_stratego/envs/%s/%s" % (TERRAIN_DIR, LAND_TEXTURE))
+        grassImage = pygame.image.load("%s/%s/%s" % (dirname, TERRAIN_DIR, LAND_TEXTURE))
         DEFAULT_IMAGE_SIZE = (self.boardWidth * self.tilePix, self.boardWidth * self.tilePix)
         self.grass_image = pygame.transform.scale(grassImage, DEFAULT_IMAGE_SIZE)
 
-        waterImage = pygame.image.load("gym_stratego/envs/%s/%s" % (TERRAIN_DIR, WATER_TEXTURE))
+        waterImage = pygame.image.load("%s/%s/%s" % (dirname, TERRAIN_DIR, WATER_TEXTURE))
         DEFAULT_IMAGE_SIZE = (self.tilePix, self.tilePix)
         self.water_image = pygame.transform.scale(waterImage, DEFAULT_IMAGE_SIZE)
 
@@ -38,7 +41,7 @@ class StrategoEnv(gym.Env):
 
         pygame.init()
 
-        self.my_font = pygame.font.Font('gym_stratego/envs/fonts/FreeSansBold.ttf', 16)
+        self.my_font = pygame.font.Font(dirname + '/fonts/FreeSansBold.ttf', 16)
         self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2, self.boardsize * 1))
         self.BATTLE_SCREEN = pygame.Surface((self.boardsize, self.boardsize))
         self.RED_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
