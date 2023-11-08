@@ -1,8 +1,0 @@
-README.md
-setup.py
-gym_stratego/__init__.py
-gym_stratego.egg-info/PKG-INFO
-gym_stratego.egg-info/SOURCES.txt
-gym_stratego.egg-info/dependency_links.txt
-gym_stratego.egg-info/requires.txt
-gym_stratego.egg-info/top_level.txt
