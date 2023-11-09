@@ -1,13 +1,10 @@
 import gym
 import time
-import cv2
+#import cv2
 import numpy as np
 import random
+from gym_stratego.envs import StrategoEnv
 
-#import gym_stratego 
-#print("gym_stratego.__file__: ", gym_stratego.__file__)
-
-from gym_stratego.envs import StrategoEnv 
 env = gym.make("stratego-v0")
 
 for episode in range(0, 10000):
