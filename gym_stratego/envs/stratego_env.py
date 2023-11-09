@@ -1,5 +1,6 @@
 import numpy as np
 import gym
+from gym import spaces
 import pygame
 from PIL import Image, ImageTk
 from math import sin, pi
@@ -48,6 +49,23 @@ class StrategoEnv(gym.Env):
         self.BLUE_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
 
         CLOCK = pygame.time.Clock()
+
+        # Observations are dictionaries with the agent's and the target's location.
+        # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
+
+        size = 5
+        self.size = size  # The size of the square grid
+        self.window_size = 512  # The size of the PyGame window
+
+        self.observation_space = spaces.Dict(
+            {
+                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+            }
+        )
+
+        # We have 4 actions, corresponding to "right", "up", "left", "down"
+        self.action_space = spaces.Discrete(4)
 
     def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board
