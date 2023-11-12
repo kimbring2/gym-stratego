@@ -25,6 +25,9 @@ class StrategoEnv(gym.Env):
         self.tilePix = 120
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
+
+        print("self.boardsize: ", self.boardsize)
+
         self.diagonal = False
 
         self.unitIcons = Icons(self.tilePix)
@@ -59,13 +62,21 @@ class StrategoEnv(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "battle_field": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "red_offboard": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "blue_offboard": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "movable_units": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "clicked_unit": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "movable_positions": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "red_offboard_rank": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "blue_offboard_rank": spaces.Box(0, size - 1, shape=(2,), dtype=int)
             }
         )
 
         # We have 4 actions, corresponding to "right", "up", "left", "down"
         self.action_space = spaces.Discrete(4)
+
+        self.pending_actions = []
 
     def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board
@@ -109,11 +120,13 @@ class StrategoEnv(gym.Env):
         return movable_positions
 
     def observation(self):
-        state = np.ones((self.boardWidth, self.boardWidth, 3)) * 255.0
+        state = np.ones((self.boardWidth, self.boardWidth, 4)) * 255.0
 
         movable_units = []
         red_offboard = []
         blue_offboard = []
+        blue_offboard_rank = []
+        red_offboard_rank = []
 
         for unit in self.redArmy.army:
             #print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
@@ -124,8 +137,10 @@ class StrategoEnv(gym.Env):
                 state[x, y, 0] = 180.0
                 state[x, y, 1] = 180.0
                 state[x, y, 2] = int(unit.rank * 10)
+                state[x, y, 3] = unit.tag_number
             else:
-                red_offboard.append(unit.rank)
+                red_offboard.append(unit.tag_number)
+                red_offboard_rank.append(int(unit.rank * 10))
 
             if unit.isOffBoard() == False:
                 if self.is_movable(unit):
@@ -136,14 +151,17 @@ class StrategoEnv(gym.Env):
                 x, y = unit.getPosition()
                 state[x, y, 0] = 30.0
                 state[x, y, 1] = 30.0
-                state[x, y, 2] = 30.0
+                state[x, y, 2] = -10.0
+                state[x, y, 3] = unit.tag_number
             elif unit.isOffBoard() == False and unit.isKnown:
                 x, y = unit.getPosition()
                 state[x, y, 0] = 30.0
                 state[x, y, 1] = 30.0
                 state[x, y, 2] = int(unit.rank * 10)
+                state[x, y, 3] = unit.tag_number
             else:
-                blue_offboard.append(unit.rank)
+                blue_offboard.append(unit.tag_number)
+                blue_offboard_rank.append(int(unit.rank * 10))
 
         if self.clicked_unit:
             clicked_unit = (self.clicked_unit).tag_number
@@ -161,7 +179,9 @@ class StrategoEnv(gym.Env):
             'blue_offboard': blue_offboard,
             'movable_units' : movable_units,
             'clicked_unit': clicked_unit,
-            'movable_positions': movable_positions
+            'movable_positions': movable_positions,
+            'red_offboard_rank': red_offboard_rank,
+            'blue_offboard_rank': blue_offboard_rank
         }
 
         return observation
@@ -174,7 +194,13 @@ class StrategoEnv(gym.Env):
     def move_unit(self, x, y):
         unit = self.getUnit(x, y)
 
+        #print("unit.position: ", unit.position)
+
         if self.unit_selected == False and unit:
+            if unit.rank == 11:
+                #print("bomb unit can not be selected")
+                return self.observation(), self.reward, self.done, self.step_phase
+
             if unit.color == "Red":
                 unit.selected = True
                 self.unit_selected = True
@@ -193,6 +219,10 @@ class StrategoEnv(gym.Env):
                 unit.selected = False
                 self.step_phase = 1
                 self.unit_selected = False
+
+                if self.clicked_unit != None:
+                    self.clicked_unit.selected = False
+
                 self.clicked_unit = None
 
                 return self.observation(), self.reward, self.done, self.step_phase
@@ -200,17 +230,27 @@ class StrategoEnv(gym.Env):
             result = self.moveUnit(x, y)
             self.clicked_unit.selected = False
             self.unit_selected = False
+
             self.clicked_unit = None
+
             self.step_phase = 1
 
     def step(self, action):
+        if (action[0] == -1) or (action[1] == -1):
+            info = {"step_phase": self.step_phase}
+            return self.observation(), self.reward, self.done, info
+
         self.update_screen()
         self.move_unit(action[0], action[1])
 
-        return self.observation(), self.reward, self.done, self.step_phase
+        info = {"step_phase": self.step_phase}
+
+        return self.observation(), self.reward, self.done, info
 
     def step_render(self):
         while True:
+            #print("self.clicked_unit: ", self.clicked_unit)
+
             self.update_screen()
 
             if self.step_phase == 3:
@@ -222,14 +262,20 @@ class StrategoEnv(gym.Env):
             event_list = pygame.event.get()
             for event in event_list:
                 if event.type == pygame.MOUSEBUTTONDOWN:
+                    print("(event.pos[0]: %d, event.pos[1]: %d)" % (event.pos[1], event.pos[1]))
+
                     x = int(event.pos[0] / self.tilePix)
                     y = int(event.pos[1] / self.tilePix)
 
-                    print("(%d, %d)" % (x, y))
+                    print("(x: %d, y: %d)" % (x, y))
                     self.move_unit(x, y)
-                    return self.observation(), self.reward, self.done, self.step_phase
 
-        return self.observation(), self.reward, self.done, self.step_phase
+                    info = {"step_phase": self.step_phase}
+                    return self.observation(), self.reward, self.done, info
+
+
+        info = {"step_phase: ", self.step_phase}
+        return self.observation(), self.reward, self.done, info
 
     def newGame(self, event=None):
         self.blueArmy = Army("classical", "Blue", self.boardWidth * self.armyHeight)
@@ -478,7 +524,7 @@ class StrategoEnv(gym.Env):
         attacker.unit_selected = False
         defender.unit_selected = False
 
-        print("text: ", text)
+        #print("text: ", text)
 
     def otherPlayer(self, color):
         """Return opposite color"""
@@ -533,7 +579,7 @@ class StrategoEnv(gym.Env):
                     if unit.isKnown and random() <= FORGETCHANCEEASY:
                         unit.isKnown = False
 
-            print("%s moves unit at (%s,%s) to (%s,%s)" % (self.turn, oldlocation[0], oldlocation[1], move[0], move[1]))
+            ##print("%s moves unit at (%s,%s) to (%s,%s)" % (self.turn, oldlocation[0], oldlocation[1], move[0], move[1]))
 
         self.turn = self.otherPlayer(self.turn)
 
@@ -550,6 +596,9 @@ class StrategoEnv(gym.Env):
 
         if unit.color == "Red" and self.redArmy.getUnit(x, y):
             return False
+
+        #if unit.rank == 11:
+        #    return False
 
         #if not self.started:
         #    if y < (self.boardWidth - 4):
