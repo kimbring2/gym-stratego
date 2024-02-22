@@ -102,7 +102,7 @@ class Army:
 
 class Unit:
     # default abilities
-    walkFar = False        # scout ability
+    walkFar = False          # scout ability
     canKillMarshal = False # spy ability
     canDefuseBomb = False  # canDefuseBomb ability
     canMove = True
@@ -119,6 +119,7 @@ class Unit:
         self.possibleUnmovableRanks = []
         self.selected = False
         self.tag_number = 0
+        self.movable = False
 
     def getPosition(self):
         return self.position

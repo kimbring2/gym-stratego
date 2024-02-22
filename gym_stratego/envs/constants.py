@@ -32,6 +32,8 @@ BLUE_PLAYER_COLOR = (0, 0, 170)
 SELECTED_BLUE_PLAYER_COLOR = (0, 0, 238)
 SHADOW_BLUE_COLOR = "#006"
 
+MOVABLE_COLOR = (255, 255, 0)
+
 MOVE_ANIM_STEPS = 10  # number of frames in move animations
 MOVE_ANIM_FRAMERATE = 15  # time between animation frames in milliseconds
 

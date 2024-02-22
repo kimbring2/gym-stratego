@@ -26,7 +26,7 @@ class StrategoEnv(gym.Env):
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
 
-        print("self.boardsize: ", self.boardsize)
+        #print("self.boardsize: ", self.boardsize)
 
         self.diagonal = False
 
@@ -83,7 +83,7 @@ class StrategoEnv(gym.Env):
         and whether or not diagonal movement is enabled."""
         (x, y) = unit.position
 
-        if unit.rank != 11:
+        if unit.rank != 11 and unit.rank != 0:
             west = self.legalMove(unit, x - 1, y)
             north = self.legalMove(unit, x, y - 1)
             south = self.legalMove(unit, x, y + 1)
@@ -131,6 +131,7 @@ class StrategoEnv(gym.Env):
         for unit in self.redArmy.army:
             #print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
             #movable = self.is_movable(unit)
+            unit.movable = False 
 
             if unit.isOffBoard() == False:
                 x, y = unit.getPosition()
@@ -144,6 +145,7 @@ class StrategoEnv(gym.Env):
 
             if unit.isOffBoard() == False:
                 if self.is_movable(unit):
+                    unit.movable = True
                     movable_units.append(unit.tag_number)
 
         for unit in self.blueArmy.army:
@@ -188,7 +190,6 @@ class StrategoEnv(gym.Env):
         
     def reset(self):
         self.newGame()
-
         info = {"step_phase": self.step_phase}
 
         return self.observation(), self.reward, self.done, info
@@ -201,6 +202,9 @@ class StrategoEnv(gym.Env):
         if self.unit_selected == False and unit:
             if unit.rank == 11:
                 #print("bomb unit can not be selected")
+                return self.observation(), self.reward, self.done, self.step_phase
+            elif unit.rank == 0:
+                #print("flag unit can not be selected")
                 return self.observation(), self.reward, self.done, self.step_phase
 
             if unit.color == "Red":
@@ -275,8 +279,8 @@ class StrategoEnv(gym.Env):
                     info = {"step_phase": self.step_phase}
                     return self.observation(), self.reward, self.done, info
 
-
         info = {"step_phase: ", self.step_phase}
+
         return self.observation(), self.reward, self.done, info
 
     def newGame(self, event=None):
@@ -291,7 +295,7 @@ class StrategoEnv(gym.Env):
 
         self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
         self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
-                       "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
+                          "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
 
         self.brains["Blue"].placeArmy(self.armyHeight)
 
@@ -418,7 +422,6 @@ class StrategoEnv(gym.Env):
 
     def attack(self, attacker, defender):
         """Show the outcome of an attack and remove defeated pieces from the board"""
-
         ########
         if attacker.color == "Red":
             attackerArmy = self.redArmy
@@ -662,8 +665,13 @@ class StrategoEnv(gym.Env):
                 pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
             else:
-                pygame.draw.rect(self.BATTLE_SCREEN, color, 
-                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+                if unit.movable:
+                    color = MOVABLE_COLOR
+                    pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                                    pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
+                else:
+                    pygame.draw.rect(self.BATTLE_SCREEN, color, 
+                                    pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
         elif unit.alive and unit.color == 'Blue':
             if unit.isKnown == False:
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
@@ -712,7 +720,7 @@ class StrategoEnv(gym.Env):
                 unplacedBlue += 1
 
     def update_screen(self):
-        print("update_screen()")
+        #print("update_screen()")
 
         blockSize = self.armyHeight # Set the size of the grid block
         self.BATTLE_SCREEN.blit(self.grass_image, (0, 0))
