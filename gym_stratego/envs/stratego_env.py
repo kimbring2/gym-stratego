@@ -189,7 +189,9 @@ class StrategoEnv(gym.Env):
     def reset(self):
         self.newGame()
 
-        return self.observation(), self.reward, self.done, self.step_phase
+        info = {"step_phase": self.step_phase}
+
+        return self.observation(), self.reward, self.done, info
         
     def move_unit(self, x, y):
         unit = self.getUnit(x, y)
@@ -468,7 +470,6 @@ class StrategoEnv(gym.Env):
             attacker.position = defender.position
             defender.die()
             self.victory(attacker.color)
-
         elif attacker.canDefuseBomb and defender.name == "Bomb":
             attacker.position = defender.position
             defender.die()
@@ -711,6 +712,8 @@ class StrategoEnv(gym.Env):
                 unplacedBlue += 1
 
     def update_screen(self):
+        print("update_screen()")
+
         blockSize = self.armyHeight # Set the size of the grid block
         self.BATTLE_SCREEN.blit(self.grass_image, (0, 0))
 
