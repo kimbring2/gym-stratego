@@ -29,14 +29,45 @@ Additionally, you can see the the dead unit of player and opponent at the right 
 # Observation and Action
 | State |  Format |
 | ------------- | ------------- |
-| battle_field | Numpy array that has (10, 10, 3) shape. The value of array is the int(unit.rank * 10) for player unit and known opponent unit. The 30.0 for unknown opponent unit.|
-| red_offboard | Tag number for the dead unit of player. E.g. [10, 7, 6, 6, 6, 5, 4, 3, 2, 2, 2, 2, 2, 2, 2, 1] |
-| blue_offboard | Tag number for the dead unit of opponent. E.g. [7, 7, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 11, 11, 1] |
-| movable_units | Tag number for the unit of player which can control for next turn. E.g. [0, 2, 3, 6, 10, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 26] |
-| movable_positions | The x, y coordinate of battle field where the selected unit of player can move for next turn. E.g. [(6, 3), (7, 2), (8, 3)] |
+| unit_info | The movable units and their movable position. E.g. ```unit_info:  {1: [(8, 8)], 2: [(7, 7)], 5: [(5, 9)], 7: [(2, 9)], 8: [(0, 8), (1, 9)], 9: [(0, 6), (0, 8), (1, 7)], 10: [(8, 8)], 11: [(7, 7), (8, 8)], 12: [(7, 7), (8, 6), (8, 8)], 13: [(7, 7), (8, 6)], 14: [(5, 9)], 17: [(2, 9)], 18: [(0, 8), (1, 7), (1, 9)], 20: [(8, 4), (9, 3), (9, 5)], 22: [(8, 4), (8, 6), (9, 5)], 23: [(8, 6), (9, 5)], 24: [(5, 9)], 27: [(1, 7)]}```  |
+| battle_field | Numpy array that has (10, 10, 3) shape. The value of the array is the int(unit.rank * 10) for the player unit and known opponent unit. The 30.0 for unknown opponent unit.|
+| red_offboard | Tag number for the dead unit of the player. E.g. ```[10, 7, 6, 6, 6, 5, 4, 3, 2, 2, 2, 2, 2, 2, 2, 1]``` |
+| blue_offboard | Tag number for the dead unit of opponent. E.g. ```[7, 7, 6, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 11, 11, 1]``` |
 
 # Example Code
-Please run the env_test.py file for that.
+```
+import gym
+import time
+import cv2
+import numpy as np
+import random
+from gym_stratego.envs import StrategoEnv
+
+env = gym.make("stratego-v0")
+
+for episode in range(0, 10):
+    observation = env.large_reset()
+    while True:
+        # observation.keys():  dict_keys(['unit_info', 'battle_field', 'red_offboard', 'blue_offboard'])
+        unit_info = observation["unit_info"]
+        battle_field = observation["battle_field"] / 255.0
+        red_offboard = observation["red_offboard"]
+        blue_offboard = observation["blue_offboard"]
+
+        cv2.imshow('battle_field', battle_field)
+        cv2.waitKey(1)
+
+        unit_list = list(unit_info.keys())
+        select_unit = random.choice(unit_list)
+        select_unit_position = unit_info[select_unit]
+        select_position = random.choice(select_unit_position)
+
+        observation, reward, done, info = env.large_step(select_unit, select_position[0], select_position[1])
+        if done:
+            break
+
+env.close()
+```
 
 # Play as human
 It is possible to play the game manually. Please change the ```env.step(action)``` part as of code as ```env.step_render()```.
