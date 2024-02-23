@@ -11,6 +11,7 @@ import gym_stratego.envs.explosion
 from gym_stratego.envs.constants import *
 from gym_stratego.envs.brains import *
 import os
+import time
 
 BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
 dirname = os.path.dirname(__file__)
@@ -191,13 +192,40 @@ class StrategoEnv(gym.Env):
     def reset(self):
         self.newGame()
         info = {"step_phase": self.step_phase}
+        self.update_screen()
 
         return self.observation(), self.reward, self.done, info
-        
+    
+    def large_reset(self):
+        #print("large_reset()")
+        observation, reward, done, info = self.reset()
+
+        battle_field = observation['battle_field'] 
+        red_offboard = observation['red_offboard']
+        blue_offboard = observation['blue_offboard']
+        movable_units = observation['movable_units']
+        clicked_unit = observation['clicked_unit']
+        movable_positions = observation['movable_positions']
+
+        large_observation = {}
+        for unit in movable_units:
+            select_unit = self.get_unit_from_tag(unit)
+            (x, y) = select_unit.position
+
+            observation, reward, done, info = self.step((x, y))
+            #self.update_screen()
+
+            movable_positions = observation['movable_positions']
+
+            observation, reward, done, info = self.step((x, y))
+            #self.update_screen()
+
+            large_observation[unit] = movable_positions
+
+        return large_observation
+
     def move_unit(self, x, y):
         unit = self.getUnit(x, y)
-
-        #print("unit.position: ", unit.position)
 
         if self.unit_selected == False and unit:
             if unit.rank == 11:
@@ -246,17 +274,49 @@ class StrategoEnv(gym.Env):
             info = {"step_phase": self.step_phase}
             return self.observation(), self.reward, self.done, info
 
-        self.update_screen()
         self.move_unit(action[0], action[1])
 
         info = {"step_phase": self.step_phase}
 
         return self.observation(), self.reward, self.done, info
 
+    def large_step(self, unit_tag, pos_x, pos_y):
+        select_unit = self.get_unit_from_tag(unit_tag)
+        (x, y) = select_unit.position
+
+        observation, reward, done, info = self.step((x, y))
+        #self.update_screen()
+
+        observation, reward, done, info = self.step((pos_x, pos_y))
+        #self.update_screen()
+
+        battle_field = observation['battle_field']
+        red_offboard = observation['red_offboard']
+        blue_offboard = observation['blue_offboard']
+        movable_units = observation['movable_units']
+        clicked_unit = observation['clicked_unit']
+        movable_positions = observation['movable_positions']
+
+        large_observation = {}
+        for unit in movable_units:
+            select_unit = self.get_unit_from_tag(unit)
+            (x, y) = select_unit.position
+            observation, reward, done, info = self.step((x, y))
+            #self.update_screen()
+
+            movable_positions = observation['movable_positions']
+
+            observation, reward, done, info = self.step((x, y))
+            #self.update_screen()
+
+            large_observation[unit] = movable_positions
+
+        self.update_screen()
+
+        return large_observation, reward, done, info
+
     def step_render(self):
         while True:
-            #print("self.clicked_unit: ", self.clicked_unit)
-
             self.update_screen()
 
             if self.step_phase == 3:
