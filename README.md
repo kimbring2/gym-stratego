@@ -15,6 +15,12 @@ $ git clone https://github.com/kimbring2/gym-stratego
 $ cd gym-stratego
 $ pip install -e .
 ```
+
+Additionally, you need to install the ```Tkinter``` for your Python. Below is an example of the Python 3.9 version.
+```
+$ sudo apt-get install python3.9-tk
+```
+
 # OpenAI Gym Sequence
 Unlike the other game like a Pong, the Stratego has a multipl unit. Therefore, the step process consist of three phase. At the first phase, you should select one of your unit. At the second phase, the selected unit has the bold boundary line. At the third phase you need to decide the possition where the selectec unit of first phase will move to. 
 
