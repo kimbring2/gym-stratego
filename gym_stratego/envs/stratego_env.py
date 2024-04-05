@@ -208,6 +208,7 @@ class StrategoEnv(gym.Env):
         movable_positions = observation['movable_positions']
 
         large_observation = {}
+        unit_info = {}
         for unit in movable_units:
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
@@ -220,7 +221,12 @@ class StrategoEnv(gym.Env):
             observation, reward, done, info = self.step((x, y))
             #self.update_screen()
 
-            large_observation[unit] = movable_positions
+            unit_info[unit] = movable_positions
+
+        large_observation["unit_info"] = unit_info
+        large_observation["battle_field"] = battle_field
+        large_observation["red_offboard"] = red_offboard
+        large_observation["blue_offboard"] = blue_offboard
 
         return large_observation
 
@@ -282,6 +288,8 @@ class StrategoEnv(gym.Env):
 
     def large_step(self, unit_tag, pos_x, pos_y):
         select_unit = self.get_unit_from_tag(unit_tag)
+        print("select_unit: ", select_unit)
+
         (x, y) = select_unit.position
 
         observation, reward, done, info = self.step((x, y))
@@ -297,10 +305,14 @@ class StrategoEnv(gym.Env):
         clicked_unit = observation['clicked_unit']
         movable_positions = observation['movable_positions']
 
+        #print("")
+
         large_observation = {}
+        unit_info = {}
         for unit in movable_units:
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
+
             observation, reward, done, info = self.step((x, y))
             #self.update_screen()
 
@@ -309,7 +321,12 @@ class StrategoEnv(gym.Env):
             observation, reward, done, info = self.step((x, y))
             #self.update_screen()
 
-            large_observation[unit] = movable_positions
+            unit_info[unit] = movable_positions
+
+        large_observation["unit_info"] = unit_info
+        large_observation["battle_field"] = battle_field
+        large_observation["red_offboard"] = red_offboard
+        large_observation["blue_offboard"] = blue_offboard
 
         self.update_screen()
 
@@ -328,12 +345,12 @@ class StrategoEnv(gym.Env):
             event_list = pygame.event.get()
             for event in event_list:
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    print("(event.pos[0]: %d, event.pos[1]: %d)" % (event.pos[1], event.pos[1]))
+                    #print("(event.pos[0]: %d, event.pos[1]: %d)" % (event.pos[1], event.pos[1]))
 
                     x = int(event.pos[0] / self.tilePix)
                     y = int(event.pos[1] / self.tilePix)
 
-                    print("(x: %d, y: %d)" % (x, y))
+                    #print("(x: %d, y: %d)" % (x, y))
                     self.move_unit(x, y)
 
                     info = {"step_phase": self.step_phase}
@@ -391,7 +408,7 @@ class StrategoEnv(gym.Env):
     def moveUnit(self, x, y):
         """Move a unit according to selected unit and clicked destination"""
         if not self.legalMove(self.clicked_unit, x, y):
-            print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
+            #print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
             return False
 
         if self.clicked_unit.color == "Red":
@@ -414,7 +431,7 @@ class StrategoEnv(gym.Env):
         target = self.getUnit(x, y)
         if target:
             if target.color == self.clicked_unit.color:
-                print("You can't move there - tile already occupied!")
+                #print("You can't move there - tile already occupied!")
                 return False
             elif target.color == self.clicked_unit.color and not self.started:  # switch units
                     (xold, yold) = self.clicked_unit.getPosition()
@@ -428,7 +445,7 @@ class StrategoEnv(gym.Env):
 
             return
         else:
-            print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
+            #print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
             if (abs(self.clicked_unit.position[0] - x) + abs(self.clicked_unit.position[1] - y)) > 1 and self.clicked_unit.hasMovedFar != True:
                 if not self.clicked_unit.hasMoved:
                     thisArmy.nrOfKnownMovable += 1
@@ -476,7 +493,7 @@ class StrategoEnv(gym.Env):
             self.reward = (0, 1)
 
         casualties = len(self.redArmy.army) - self.redArmy.nrAlive()
-        print("%s has won the game in %i turns!" % (color, self.turnNr))
+        #print("%s has won the game in %i turns!" % (color, self.turnNr))
 
         self.done = True
 
