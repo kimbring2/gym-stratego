@@ -27,8 +27,6 @@ class StrategoEnv(gym.Env):
         self.armyHeight = min(4, (self.boardWidth - 2) / 2)
         self.boardsize = self.boardWidth * self.tilePix
 
-        #print("self.boardsize: ", self.boardsize)
-
         self.diagonal = False
 
         self.unitIcons = Icons(self.tilePix)
@@ -45,9 +43,10 @@ class StrategoEnv(gym.Env):
         self.WHITE = (200, 200, 200)
 
         pygame.init()
+        pygame.font.init()
 
         self.my_font = pygame.font.Font(dirname + '/fonts/FreeSansBold.ttf', 16)
-        self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2, self.boardsize * 1))
+        self.MAIN_SCREEN = pygame.display.set_mode((self.boardsize * 2 + 50, self.boardsize * 1 + 50))
         self.BATTLE_SCREEN = pygame.Surface((self.boardsize, self.boardsize))
         self.RED_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
         self.BLUE_SIDE_SCREEN = pygame.Surface((self.boardsize, int(self.boardsize / 2)))
@@ -56,7 +55,6 @@ class StrategoEnv(gym.Env):
 
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2, i.e. MultiDiscrete([size, size]).
-
         size = 5
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
@@ -240,6 +238,9 @@ class StrategoEnv(gym.Env):
             elif unit.rank == 0:
                 #print("flag unit can not be selected")
                 return self.observation(), self.reward, self.done, self.step_phase
+            elif self.is_movable(unit) == False:
+                print("this unit can not be selected")
+                return self.observation(), self.reward, self.done, self.step_phase
 
             if unit.color == "Red":
                 unit.selected = True
@@ -293,10 +294,7 @@ class StrategoEnv(gym.Env):
         (x, y) = select_unit.position
 
         observation, reward, done, info = self.step((x, y))
-        #self.update_screen()
-
         observation, reward, done, info = self.step((pos_x, pos_y))
-        #self.update_screen()
 
         battle_field = observation['battle_field']
         red_offboard = observation['red_offboard']
@@ -305,8 +303,6 @@ class StrategoEnv(gym.Env):
         clicked_unit = observation['clicked_unit']
         movable_positions = observation['movable_positions']
 
-        #print("")
-
         large_observation = {}
         unit_info = {}
         for unit in movable_units:
@@ -314,12 +310,8 @@ class StrategoEnv(gym.Env):
             (x, y) = select_unit.position
 
             observation, reward, done, info = self.step((x, y))
-            #self.update_screen()
-
             movable_positions = observation['movable_positions']
-
             observation, reward, done, info = self.step((x, y))
-            #self.update_screen()
 
             unit_info[unit] = movable_positions
 
@@ -347,8 +339,8 @@ class StrategoEnv(gym.Env):
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     #print("(event.pos[0]: %d, event.pos[1]: %d)" % (event.pos[1], event.pos[1]))
 
-                    x = int(event.pos[0] / self.tilePix)
-                    y = int(event.pos[1] / self.tilePix)
+                    x = int((event.pos[0] - 25) / self.tilePix)
+                    y = int((event.pos[1] - 25) / self.tilePix)
 
                     #print("(x: %d, y: %d)" % (x, y))
                     self.move_unit(x, y)
@@ -605,8 +597,6 @@ class StrategoEnv(gym.Env):
         attacker.unit_selected = False
         defender.unit_selected = False
 
-        #print("text: ", text)
-
     def otherPlayer(self, color):
         """Return opposite color"""
         if color == "Red": 
@@ -825,9 +815,73 @@ class StrategoEnv(gym.Env):
 
         self.drawSidePanels()
 
-        self.MAIN_SCREEN.blit(self.BATTLE_SCREEN, (0, 0))
-        self.MAIN_SCREEN.blit(self.BLUE_SIDE_SCREEN, (self.boardsize, 0))
-        self.MAIN_SCREEN.blit(self.RED_SIDE_SCREEN, (self.boardsize, int(self.boardsize / 2)))
+        self.MAIN_SCREEN.blit(self.BATTLE_SCREEN, (50, 50))
+        self.MAIN_SCREEN.blit(self.BLUE_SIDE_SCREEN, (self.boardsize + 50, 0 + 50))
+        self.MAIN_SCREEN.blit(self.RED_SIDE_SCREEN, (self.boardsize + 50, int(self.boardsize / 2) + 50))
+
+        my_font = pygame.font.SysFont('Comic Sans MS', 50)
+        text_surface = my_font.render('a', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 0, 15))
+
+        text_surface = my_font.render('b', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 1, 15))
+
+        text_surface = my_font.render('c', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 2, 15))
+
+        text_surface = my_font.render('d', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 3, 15))
+
+        text_surface = my_font.render('e', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 4, 15))
+
+        text_surface = my_font.render('f', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 5, 15))
+
+        text_surface = my_font.render('g', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 6, 15))
+
+        text_surface = my_font.render('h', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 7, 15))
+
+        text_surface = my_font.render('i', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 8, 15))
+
+        text_surface = my_font.render('j', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 9, 15))
+
+        text_surface = my_font.render('1', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 0))
+
+        text_surface = my_font.render('2', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 1))
+
+        text_surface = my_font.render('3', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 2))
+
+        text_surface = my_font.render('4', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 3))
+
+        text_surface = my_font.render('5', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 4))
+
+        text_surface = my_font.render('6', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 5))
+
+        text_surface = my_font.render('7', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 6))
+
+        text_surface = my_font.render('8', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 7))
+
+        text_surface = my_font.render('9', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 8))
+
+        text_surface = my_font.render('10', False, (255, 255, 255))
+        self.MAIN_SCREEN.blit(text_surface, (8, 20 + 75 + 120 * 9))
+
+        #text_surface = my_font.render('8', False, (255, 255, 255))
+        #self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 10))
 
         pygame.display.update()
 

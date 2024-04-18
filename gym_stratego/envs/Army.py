@@ -11,7 +11,6 @@ class Army:
              'lieutenant', 'sergeant', 'canDefuseBomb', 'scout', 'spy', 'bomb', 'flag']
     def __init__(self, armyType="classical", color="Red", size=40):
         """Represents a Stratego army as a list of Units."""
-
         self.armyType = armyType
         self.color = color
         self.flagIsBombProtected = False
@@ -154,10 +153,6 @@ class Icons:
     def __init__(self, tilepix):
         self.icons = {}
         for rank in ['Marshal', 'General', 'Colonel', 'Major', 'Captain', 'Lieutenant', 'Sergeant', 'Miner', 'Scout', 'Bomb', 'Spy', 'Flag']:
-            #icon = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
-            #icon = icon.resize((2 * tilepix, 2 * tilepix), Image.BICUBIC)
-            #icon = icon.resize((tilepix, tilepix), Image.ANTIALIAS)
-            #self.icons[rank] = ImageTk.PhotoImage(icon)
             icon = pygame.image.load("%s/%s/%s.%s" % (dirname, ICON_DIR, rank.lower(), ICON_TYPE))
             DEFAULT_IMAGE_SIZE = (tilepix, tilepix)
             self.icons[rank] = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)
@@ -166,9 +161,6 @@ class Icons:
         return self.icons[rank]
 
     def getImage(self, rank, size):
-        #img = Image.open("%s/%s.%s" % (ICON_DIR, rank.lower(), ICON_TYPE))
-        #img = img.resize((2 * size, 2 * size), Image.BICUBIC)
-        #img = img.resize((size, size), Image.ANTIALIAS)
         img = pygame.image.load("%s/%s/%s.%s" % (dirname, ICON_DIR, rank.lower(), ICON_TYPE))
         DEFAULT_IMAGE_SIZE = (size, size)
         img = pygame.transform.scale(icon, DEFAULT_IMAGE_SIZE)

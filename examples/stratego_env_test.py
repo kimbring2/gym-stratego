@@ -5,7 +5,11 @@ import numpy as np
 import random
 from gym_stratego.envs import StrategoEnv
 
+import gym_stratego
+print("gym_stratego.__file__: ", gym_stratego.__file__)
+
 env = gym.make("stratego-v0")
+
 
 for episode in range(0, 1):
     observation = env.large_reset()
@@ -14,7 +18,7 @@ for episode in range(0, 1):
     step = 0
     while True:
         print("step: ", step)
-
+        '''
         key_list = list(observation.keys())
         #print("key_list: ", key_list)
 
@@ -32,8 +36,10 @@ for episode in range(0, 1):
 
         select_position = random.choice(movable_position)
         #print("select_position: ", select_position)
+        '''
 
-        observation, reward, done, info = env.large_step(select_unit, select_position[0], select_position[1])
+        #observation, reward, done, info = env.large_step(select_unit, select_position[0], select_position[1])
+        observation, reward, done, info = env.step_render()
 
         if done:
             print("done: ", done)
@@ -41,6 +47,6 @@ for episode in range(0, 1):
 
         step += 1
 
-        time.sleep(0.5)
+        #time.sleep(0.5)
 
 env.close()
