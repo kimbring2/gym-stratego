@@ -192,11 +192,11 @@ class StrategoEnv(gym.Env):
         info = {"step_phase": self.step_phase}
         self.update_screen()
 
-        return self.observation(), self.reward, self.done, info
+        return self.observation()
     
     def large_reset(self):
         #print("large_reset()")
-        observation, reward, done, info = self.reset()
+        observation = self.reset()
 
         battle_field = observation['battle_field'] 
         red_offboard = observation['red_offboard']
