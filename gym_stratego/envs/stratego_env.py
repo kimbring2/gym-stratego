@@ -12,6 +12,8 @@ from gym_stratego.envs.constants import *
 from gym_stratego.envs.brains import *
 import os
 import time
+import utils
+
 
 BRAINLIST = [module[1] for module in pkgutil.iter_modules(['brains']) if not module[1] == "Brain"]
 dirname = os.path.dirname(__file__)
@@ -76,6 +78,8 @@ class StrategoEnv(gym.Env):
         self.action_space = spaces.Discrete(4)
 
         self.pending_actions = []
+
+        self.stratego_labels = utils.create_stratego_labels()
 
     def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board
@@ -187,16 +191,16 @@ class StrategoEnv(gym.Env):
 
         return observation
         
-    def reset(self):
+    def small_reset(self):
         self.newGame()
         info = {"step_phase": self.step_phase}
         self.update_screen()
 
         return self.observation()
     
-    def large_reset(self):
+    def reset(self):
         #print("large_reset()")
-        observation = self.reset()
+        observation = self.small_reset()
 
         battle_field = observation['battle_field'] 
         red_offboard = observation['red_offboard']
@@ -205,28 +209,37 @@ class StrategoEnv(gym.Env):
         clicked_unit = observation['clicked_unit']
         movable_positions = observation['movable_positions']
 
-        large_observation = {}
+        observation = {}
         unit_info = {}
+        possible_actions = []
         for unit in movable_units:
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
 
-            observation, reward, done, info = self.step((x, y))
+            small_observation, reward, done, info = self.small_step((x, y))
             #self.update_screen()
 
-            movable_positions = observation['movable_positions']
+            movable_positions = small_observation['movable_positions']
+            for movable_position in movable_positions:
+                ego = (utils.letters[x], y + 1)
+                destination = (utils.letters[movable_position[0]], movable_position[1])
 
-            observation, reward, done, info = self.step((x, y))
+                label = ego[0] + str(ego[1]) + destination[0] + str(destination[1])
+                label_index = self.stratego_labels.index(label)
+                possible_actions.append(label_index)
+
+            small_observation, reward, done, info = self.small_step((x, y))
             #self.update_screen()
 
             unit_info[unit] = movable_positions
 
-        large_observation["unit_info"] = unit_info
-        large_observation["battle_field"] = battle_field
-        large_observation["red_offboard"] = red_offboard
-        large_observation["blue_offboard"] = blue_offboard
+        observation["unit_info"] = unit_info
+        observation["battle_field"] = battle_field
+        observation["red_offboard"] = red_offboard
+        observation["blue_offboard"] = blue_offboard
+        observation["possible_actions"] = possible_actions
 
-        return large_observation
+        return observation
 
     def move_unit(self, x, y):
         unit = self.getUnit(x, y)
@@ -276,7 +289,7 @@ class StrategoEnv(gym.Env):
 
             self.step_phase = 1
 
-    def step(self, action):
+    def small_step(self, action):
         if (action[0] == -1) or (action[1] == -1):
             info = {"step_phase": self.step_phase}
             return self.observation(), self.reward, self.done, info
@@ -287,42 +300,79 @@ class StrategoEnv(gym.Env):
 
         return self.observation(), self.reward, self.done, info
 
-    def large_step(self, unit_tag, pos_x, pos_y):
+    def step(self, action):
+        #print("step()")
+        #print("action: ", action)
+
+        label = self.stratego_labels[action]
+        #print("label: ", label)
+
+        ego_x = int(utils.letters.index(label[0]))
+        ego_y = int(label[1]) - 1
+        #print("ego_x: ", ego_x)
+        #print("ego_y: ", ego_y)
+
+        destinaion_x = int(utils.letters.index(label[2]))
+        destinaion_y = int(label[3]) - 1
+        #print("destinaion_x: ", destinaion_x)
+        #print("destinaion_y: ", destinaion_y)
+
+        unit = self.getUnit(ego_x, ego_y)
+        #print("unit: ", unit)
+
+        unit_tag = unit.tag_number
+        #print("unit_tag: ", unit_tag)
+
         select_unit = self.get_unit_from_tag(unit_tag)
-        print("select_unit: ", select_unit)
+        #print("select_unit: ", select_unit)
 
         (x, y) = select_unit.position
 
-        observation, reward, done, info = self.step((x, y))
-        observation, reward, done, info = self.step((pos_x, pos_y))
+        small_observation, reward, done, info = self.small_step((x, y))
+        #self.update_screen()
+        #time.sleep(2.0)
 
-        battle_field = observation['battle_field']
-        red_offboard = observation['red_offboard']
-        blue_offboard = observation['blue_offboard']
-        movable_units = observation['movable_units']
-        clicked_unit = observation['clicked_unit']
-        movable_positions = observation['movable_positions']
+        small_observation, reward, done, info = self.small_step((destinaion_x, destinaion_y))
+        #self.update_screen()
+        #time.sleep(2.0)
 
-        large_observation = {}
+        battle_field = small_observation['battle_field']
+        red_offboard = small_observation['red_offboard']
+        blue_offboard = small_observation['blue_offboard']
+        movable_units = small_observation['movable_units']
+        clicked_unit = small_observation['clicked_unit']
+        movable_positions = small_observation['movable_positions']
+
+        observation = {}
         unit_info = {}
+        possible_actions = []
         for unit in movable_units:
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
 
-            observation, reward, done, info = self.step((x, y))
-            movable_positions = observation['movable_positions']
-            observation, reward, done, info = self.step((x, y))
+            small_observation, reward, done, info = self.small_step((x, y))
+            movable_positions = small_observation['movable_positions']
+            for movable_position in movable_positions:
+                ego = (utils.letters[x], y + 1)
+                destination = (utils.letters[movable_position[0]], movable_position[1] + 1)
+
+                label = ego[0] + str(ego[1]) + destination[0] + str(destination[1])
+                label_index = self.stratego_labels.index(label)
+                possible_actions.append(label_index)
+
+            small_observation, reward, done, info = self.small_step((x, y))
 
             unit_info[unit] = movable_positions
 
-        large_observation["unit_info"] = unit_info
-        large_observation["battle_field"] = battle_field
-        large_observation["red_offboard"] = red_offboard
-        large_observation["blue_offboard"] = blue_offboard
+        observation["unit_info"] = unit_info
+        observation["battle_field"] = battle_field
+        observation["red_offboard"] = red_offboard
+        observation["blue_offboard"] = blue_offboard
+        observation["possible_actions"] = possible_actions
 
         self.update_screen()
 
-        return large_observation, reward, done, info
+        return observation, reward, done, info
 
     def step_render(self):
         while True:
