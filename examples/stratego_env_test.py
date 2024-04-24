@@ -3,48 +3,70 @@ import time
 import cv2
 import numpy as np
 import random
-import utils
 
 from gym_stratego.envs import StrategoEnv
-
 import gym_stratego
-print("gym_stratego.__file__: ", gym_stratego.__file__)
 
 env = gym.make("stratego-v0")
+#print("env.observation_space: ", env.observation_space)
+#print("env.action_space: ", env.action_space)
 
+human_play = True
 
-stratego_labels = utils.create_stratego_labels()
-
-for episode in range(0, 1):
-    #observation = env.large_reset()
+for episode in range(0, 100):
     observation = env.reset()
 
     step = 0
     while True:
-        #time.sleep(2.0)
-
         print("step: ", step)
+        
+        if human_play == False:
+            battle_field = observation['battle_field']
+            print("battle_field.shape: ", battle_field.shape)
 
-        key_list = list(observation.keys())
-        print("key_list: ", key_list)
+            battle_field = np.reshape(battle_field, (10, 10))
+            print(battle_field)
 
-        #unit_info = observation['unit_info']
-        #print("unit_info: ", unit_info)
+            current_turn = observation["current_turn"]
+            print("current_turn: ", current_turn)
 
-        battle_field = observation['battle_field']
-        print("battle_field.shape: ", battle_field.shape)
+            possible_actions = observation['possible_actions']
+            print("possible_actions: ", possible_actions)
 
-        current_turn = observation["current_turn"]
-        print("current_turn: ", current_turn)
+            red_offboard = observation['red_offboard']
+            print("red_offboard: ", red_offboard)
 
-        possible_actions = observation['possible_actions']
-        print("possible_actions: ", possible_actions)
+            blue_offboard = observation['blue_offboard']
+            print("blue_offboard: ", blue_offboard)
 
-        action = random.choice(possible_actions)
+            action = random.choice(possible_actions)
 
-        observation, reward, done, info = env.step(action)
-        print("")
-        #observation, reward, done, info = env.step_render()
+            observation, reward, done, info = env.step(action)
+
+        else:
+            observation, reward, done, info = env.step_render()
+
+            battle_field = observation['battle_field']
+            print("battle_field.shape: ", battle_field.shape)
+
+            blue_offboard = observation['blue_offboard']
+            print("blue_offboard: ", blue_offboard)
+
+            movable_units = observation['movable_units']
+            print("movable_units: ", movable_units)
+
+            clicked_unit = observation['clicked_unit']
+            print("clicked_unit: ", clicked_unit)
+
+            movable_positions = observation['movable_positions']
+            print("movable_positions: ", movable_positions)
+
+            red_offboard_rank = observation['red_offboard_rank']
+            print("red_offboard_rank: ", red_offboard_rank)
+
+            blue_offboard_rank = observation['blue_offboard_rank']
+            print("blue_offboard_rank: ", blue_offboard_rank)
+
 
         if done:
             print("done: ", done)

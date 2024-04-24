@@ -65,24 +65,12 @@ class StrategoEnv(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "battle_field": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "red_offboard": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "blue_offboard": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "movable_units": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "clicked_unit": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "movable_positions": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "red_offboard_rank": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "blue_offboard_rank": spaces.Box(0, size - 1, shape=(2,), dtype=int)
+                "battle_field": spaces.Box(0, 255, shape=(10,10,2), dtype=int)            
             }
         )
 
-        # We have 4 actions, corresponding to "right", "up", "left", "down"
-        self.action_space = spaces.Discrete(4)
-
-        self.pending_actions = []
-
         self.stratego_labels = utils.create_stratego_labels()
-
+        self.action_space = spaces.Discrete(len(self.stratego_labels))
         self.current_turn = 'r'
 
     def is_movable(self, unit):
@@ -127,7 +115,7 @@ class StrategoEnv(gym.Env):
         return movable_positions
 
     def observation(self):
-        state = np.ones((self.boardWidth, self.boardWidth, 4)) * 255.0
+        state = np.zeros((self.boardWidth, self.boardWidth, 1))
 
         movable_units = []
         red_offboard = []
@@ -142,13 +130,10 @@ class StrategoEnv(gym.Env):
 
             if unit.isOffBoard() == False:
                 x, y = unit.getPosition()
-                state[x, y, 0] = 180.0
-                state[x, y, 1] = 180.0
-                state[x, y, 2] = int(unit.rank * 10)
-                state[x, y, 3] = unit.tag_number
+                state[x, y, 0] = unit.rank
             else:
                 red_offboard.append(unit.tag_number)
-                red_offboard_rank.append(int(unit.rank * 10))
+                red_offboard_rank.append(unit.rank)
 
             if unit.isOffBoard() == False:
                 if self.is_movable(unit):
@@ -158,19 +143,13 @@ class StrategoEnv(gym.Env):
         for unit in self.blueArmy.army:
             if unit.isOffBoard() == False and unit.isKnown == False:
                 x, y = unit.getPosition()
-                state[x, y, 0] = 30.0
-                state[x, y, 1] = 30.0
-                state[x, y, 2] = -10.0
-                state[x, y, 3] = unit.tag_number
+                state[x, y, 0] = 12.0
             elif unit.isOffBoard() == False and unit.isKnown:
                 x, y = unit.getPosition()
-                state[x, y, 0] = 30.0
-                state[x, y, 1] = 30.0
-                state[x, y, 2] = int(unit.rank * 10)
-                state[x, y, 3] = unit.tag_number
+                state[x, y, 0] = unit.rank
             else:
                 blue_offboard.append(unit.tag_number)
-                blue_offboard_rank.append(int(unit.rank * 10))
+                blue_offboard_rank.append(unit.rank)
 
         if self.clicked_unit:
             clicked_unit = (self.clicked_unit).tag_number
@@ -308,6 +287,7 @@ class StrategoEnv(gym.Env):
     def step(self, action):
         #print("step()")
         label = self.stratego_labels[action]
+        #print("label: ", label)
 
         label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
         ego_x = int(utils.letters.index(label[0]))
@@ -324,12 +304,12 @@ class StrategoEnv(gym.Env):
         (x, y) = select_unit.position
 
         small_observation, reward, done, info = self.small_step((x, y))
-        self.update_screen()
-        time.sleep(1.0)
+        #self.update_screen()
+        #time.sleep(1.0)
 
         small_observation, reward, done, info = self.small_step((destinaion_x, destinaion_y))
-        self.update_screen()
-        time.sleep(1.0)
+        #self.update_screen()
+        #time.sleep(1.0)
 
         if self.current_turn == 'r':
             self.current_turn = 'b'
@@ -395,6 +375,9 @@ class StrategoEnv(gym.Env):
 
                     #print("(x: %d, y: %d)" % (x, y))
                     self.move_unit(x, y)
+
+
+
 
                     info = {"step_phase": self.step_phase}
                     return self.observation(), self.reward, self.done, info
