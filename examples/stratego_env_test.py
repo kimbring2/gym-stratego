@@ -21,10 +21,21 @@ for episode in range(0, 1):
 
     step = 0
     while True:
+        #time.sleep(2.0)
+
         print("step: ", step)
 
         key_list = list(observation.keys())
         print("key_list: ", key_list)
+
+        #unit_info = observation['unit_info']
+        #print("unit_info: ", unit_info)
+
+        battle_field = observation['battle_field']
+        print("battle_field.shape: ", battle_field.shape)
+
+        current_turn = observation["current_turn"]
+        print("current_turn: ", current_turn)
 
         possible_actions = observation['possible_actions']
         print("possible_actions: ", possible_actions)
@@ -40,7 +51,5 @@ for episode in range(0, 1):
             break
 
         step += 1
-
-        #time.sleep(2.0)
 
 env.close()

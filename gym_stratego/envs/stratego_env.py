@@ -5,13 +5,15 @@ import pygame
 from PIL import Image, ImageTk
 from math import sin, pi
 import pkgutil
+import os
+import time
+import re
 
 from gym_stratego.envs.Army import Army, Icons
 import gym_stratego.envs.explosion
 from gym_stratego.envs.constants import *
 from gym_stratego.envs.brains import *
-import os
-import time
+
 import utils
 
 
@@ -80,6 +82,8 @@ class StrategoEnv(gym.Env):
         self.pending_actions = []
 
         self.stratego_labels = utils.create_stratego_labels()
+
+        self.current_turn = 'r'
 
     def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board
@@ -233,11 +237,12 @@ class StrategoEnv(gym.Env):
 
             unit_info[unit] = movable_positions
 
-        observation["unit_info"] = unit_info
+        #observation["unit_info"] = unit_info
         observation["battle_field"] = battle_field
         observation["red_offboard"] = red_offboard
         observation["blue_offboard"] = blue_offboard
         observation["possible_actions"] = possible_actions
+        observation["current_turn"] = self.current_turn
 
         return observation
 
@@ -302,39 +307,34 @@ class StrategoEnv(gym.Env):
 
     def step(self, action):
         #print("step()")
-        #print("action: ", action)
-
         label = self.stratego_labels[action]
-        #print("label: ", label)
 
+        label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
         ego_x = int(utils.letters.index(label[0]))
         ego_y = int(label[1]) - 1
-        #print("ego_x: ", ego_x)
-        #print("ego_y: ", ego_y)
-
         destinaion_x = int(utils.letters.index(label[2]))
         destinaion_y = int(label[3]) - 1
-        #print("destinaion_x: ", destinaion_x)
-        #print("destinaion_y: ", destinaion_y)
 
         unit = self.getUnit(ego_x, ego_y)
-        #print("unit: ", unit)
 
         unit_tag = unit.tag_number
-        #print("unit_tag: ", unit_tag)
 
         select_unit = self.get_unit_from_tag(unit_tag)
-        #print("select_unit: ", select_unit)
 
         (x, y) = select_unit.position
 
         small_observation, reward, done, info = self.small_step((x, y))
-        #self.update_screen()
-        #time.sleep(2.0)
+        self.update_screen()
+        time.sleep(1.0)
 
         small_observation, reward, done, info = self.small_step((destinaion_x, destinaion_y))
-        #self.update_screen()
-        #time.sleep(2.0)
+        self.update_screen()
+        time.sleep(1.0)
+
+        if self.current_turn == 'r':
+            self.current_turn = 'b'
+        else:
+            self.current_turn = 'r'
 
         battle_field = small_observation['battle_field']
         red_offboard = small_observation['red_offboard']
@@ -364,11 +364,12 @@ class StrategoEnv(gym.Env):
 
             unit_info[unit] = movable_positions
 
-        observation["unit_info"] = unit_info
+        #observation["unit_info"] = unit_info
         observation["battle_field"] = battle_field
         observation["red_offboard"] = red_offboard
         observation["blue_offboard"] = blue_offboard
         observation["possible_actions"] = possible_actions
+        observation["current_turn"] = self.current_turn
 
         self.update_screen()
 
