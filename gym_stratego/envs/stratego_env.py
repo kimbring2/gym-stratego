@@ -65,7 +65,11 @@ class StrategoEnv(gym.Env):
 
         self.observation_space = spaces.Dict(
             {
-                "battle_field": spaces.Box(0, 255, shape=(10,10,2), dtype=int)            
+                "battle_field": spaces.Box(0, 255, shape=(10,10,2), dtype=int),
+                "red_offboard": spaces.Box(0, 255, shape=(10,10,2), dtype=int),
+                "blue_offboard": spaces.Box(0, 255, shape=(10,10,2), dtype=int),
+                "possible_actions": spaces.Box(0, 255, shape=(10,10,2), dtype=int),
+                "current_turn": spaces.Box(0, 255, shape=(10,10,2), dtype=int)
             }
         )
 
@@ -130,7 +134,7 @@ class StrategoEnv(gym.Env):
 
             if unit.isOffBoard() == False:
                 x, y = unit.getPosition()
-                state[x, y, 0] = unit.rank
+                state[y, x, 0] = unit.rank
             else:
                 red_offboard.append(unit.tag_number)
                 red_offboard_rank.append(unit.rank)
@@ -143,13 +147,22 @@ class StrategoEnv(gym.Env):
         for unit in self.blueArmy.army:
             if unit.isOffBoard() == False and unit.isKnown == False:
                 x, y = unit.getPosition()
-                state[x, y, 0] = 12.0
+                state[y, x, 0] = 12.0
             elif unit.isOffBoard() == False and unit.isKnown:
                 x, y = unit.getPosition()
-                state[x, y, 0] = unit.rank
+                state[y, x, 0] = unit.rank + 12.0
             else:
                 blue_offboard.append(unit.tag_number)
                 blue_offboard_rank.append(unit.rank)
+
+        state[4, 2, 0] = 24.0
+        state[4, 3, 0] = 24.0
+        state[5, 2, 0] = 24.0
+        state[5, 3, 0] = 24.0
+        state[4, 6, 0] = 24.0
+        state[4, 7, 0] = 24.0
+        state[5, 6, 0] = 24.0
+        state[5, 7, 0] = 24.0
 
         if self.clicked_unit:
             clicked_unit = (self.clicked_unit).tag_number
@@ -178,11 +191,9 @@ class StrategoEnv(gym.Env):
         self.newGame()
         info = {"step_phase": self.step_phase}
         self.update_screen()
-
         return self.observation()
     
     def reset(self):
-        #print("large_reset()")
         observation = self.small_reset()
 
         battle_field = observation['battle_field'] 
@@ -200,7 +211,6 @@ class StrategoEnv(gym.Env):
             (x, y) = select_unit.position
 
             small_observation, reward, done, info = self.small_step((x, y))
-            #self.update_screen()
 
             movable_positions = small_observation['movable_positions']
             for movable_position in movable_positions:
@@ -228,24 +238,23 @@ class StrategoEnv(gym.Env):
     def move_unit(self, x, y):
         unit = self.getUnit(x, y)
 
+        result = True
         if self.unit_selected == False and unit:
             if unit.rank == 11:
                 #print("bomb unit can not be selected")
-                return self.observation(), self.reward, self.done, self.step_phase
+                return False
             elif unit.rank == 0:
                 #print("flag unit can not be selected")
-                return self.observation(), self.reward, self.done, self.step_phase
+                return False
             elif self.is_movable(unit) == False:
-                print("this unit can not be selected")
-                return self.observation(), self.reward, self.done, self.step_phase
+                #print("this unit can not be selected")
+                return False
 
             if unit.color == "Red":
                 unit.selected = True
                 self.unit_selected = True
                 self.clicked_unit = unit
                 self.step_phase = 2
-
-                return self.observation(), self.reward, self.done, self.step_phase
         elif self.unit_selected == True and unit:
             if unit.selected == True and unit.color == "Red":
                 unit.selected = False
@@ -254,6 +263,7 @@ class StrategoEnv(gym.Env):
                 self.step_phase = 1
             else:
                 result = self.moveUnit(x, y)
+
                 unit.selected = False
                 self.step_phase = 1
                 self.unit_selected = False
@@ -262,8 +272,6 @@ class StrategoEnv(gym.Env):
                     self.clicked_unit.selected = False
 
                 self.clicked_unit = None
-
-                return self.observation(), self.reward, self.done, self.step_phase
         elif self.unit_selected == True and self.clicked_unit:
             result = self.moveUnit(x, y)
             self.clicked_unit.selected = False
@@ -273,12 +281,16 @@ class StrategoEnv(gym.Env):
 
             self.step_phase = 1
 
+        return result == True
+
     def small_step(self, action):
         if (action[0] == -1) or (action[1] == -1):
             info = {"step_phase": self.step_phase}
             return self.observation(), self.reward, self.done, info
 
-        self.move_unit(action[0], action[1])
+        result = self.move_unit(action[0], action[1])
+        #print("result: ", result)
+        assert result != True, "invalid action was selected. Please select the action from possible_actions."
 
         info = {"step_phase": self.step_phase}
 
@@ -374,12 +386,11 @@ class StrategoEnv(gym.Env):
                     y = int((event.pos[1] - 25) / self.tilePix)
 
                     #print("(x: %d, y: %d)" % (x, y))
-                    self.move_unit(x, y)
-
-
-
+                    result = self.move_unit(x, y)
+                    #print("result: ", result)
 
                     info = {"step_phase": self.step_phase}
+
                     return self.observation(), self.reward, self.done, info
 
         info = {"step_phase: ", self.step_phase}
@@ -398,7 +409,7 @@ class StrategoEnv(gym.Env):
 
         self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
         self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
-                          "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
+                       "Red": self.braintypes["Red"].Brain(self, self.redArmy, self.boardWidth) if self.braintypes["Red"] else 0}
 
         self.brains["Blue"].placeArmy(self.armyHeight)
 
@@ -434,7 +445,7 @@ class StrategoEnv(gym.Env):
     def moveUnit(self, x, y):
         """Move a unit according to selected unit and clicked destination"""
         if not self.legalMove(self.clicked_unit, x, y):
-            #print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
+            print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
             return False
 
         if self.clicked_unit.color == "Red":
@@ -468,8 +479,6 @@ class StrategoEnv(gym.Env):
                 self.attack(self.clicked_unit, target)
                 if self.started:
                     self.endTurn()
-
-            return
         else:
             #print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
             if (abs(self.clicked_unit.position[0] - x) + abs(self.clicked_unit.position[1] - y)) > 1 and self.clicked_unit.hasMovedFar != True:
@@ -499,6 +508,8 @@ class StrategoEnv(gym.Env):
 
         if self.started:
             self.endTurn()
+
+        return True
 
     def victory(self, color, noMoves=False):
         """Show the victory/defeat screen"""
