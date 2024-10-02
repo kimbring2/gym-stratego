@@ -20,6 +20,7 @@ for episode in range(0, 100):
         print("step: ", step)
         
         if human_play == False:
+            #time.sleep(1.0)
             start = time.time()
 
             battle_field = observation['battle_field']
@@ -41,13 +42,14 @@ for episode in range(0, 100):
             #print("blue_offboard: ", blue_offboard)
 
             action = random.choice(possible_actions)
+            #action = possible_actions[-1]
+            #print("action: ", action)
 
             observation, reward, done, info = env.step(action)
 
             end = time.time()
-            print("elapsed time: ", end - start)
-            print("")
-            #time.sleep(0.5)
+            #print("elapsed time: ", end - start)
+            #print("")
         else:
             observation, reward, done, info = env.step_render()
 

@@ -78,8 +78,7 @@ class StrategoEnv(gym.Env):
         self.current_turn = 'r'
 
     def is_movable(self, unit):
-        """ Return a list of directly adjacent tile coordinates, considering the edge of the board
-        and whether or not diagonal movement is enabled."""
+        """ Return a list of directly adjacent tile coordinates, considering the edge of the board and whether or not diagonal movement is enabled."""
         (x, y) = unit.position
 
         if unit.rank != 11 and unit.rank != 0:
@@ -174,16 +173,9 @@ class StrategoEnv(gym.Env):
         else:
             movable_positions = -1
 
-        observation = {
-            'battle_field': state,
-            'red_offboard': red_offboard,
-            'blue_offboard': blue_offboard,
-            'movable_units' : movable_units,
-            'clicked_unit': clicked_unit,
-            'movable_positions': movable_positions,
-            'red_offboard_rank': red_offboard_rank,
-            'blue_offboard_rank': blue_offboard_rank
-        }
+        observation = {'battle_field': state, 'red_offboard': red_offboard, 'blue_offboard': blue_offboard, 'movable_units' : movable_units,
+                       'clicked_unit': clicked_unit, 'movable_positions': movable_positions, 'red_offboard_rank': red_offboard_rank,
+                       'blue_offboard_rank': blue_offboard_rank}
 
         return observation
         
@@ -191,6 +183,7 @@ class StrategoEnv(gym.Env):
         self.newGame()
         info = {"step_phase": self.step_phase}
         self.update_screen()
+
         return self.observation()
     
     def reset(self):
@@ -206,6 +199,7 @@ class StrategoEnv(gym.Env):
         observation = {}
         unit_info = {}
         possible_actions = []
+
         for unit in movable_units:
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
@@ -215,7 +209,8 @@ class StrategoEnv(gym.Env):
             movable_positions = small_observation['movable_positions']
             for movable_position in movable_positions:
                 ego = (utils.letters[x], y + 1)
-                destination = (utils.letters[movable_position[0]], movable_position[1])
+
+                destination = (utils.letters[movable_position[0]], movable_position[1] + 1)
 
                 label = ego[0] + str(ego[1]) + destination[0] + str(destination[1])
                 label_index = self.stratego_labels.index(label)
@@ -236,6 +231,7 @@ class StrategoEnv(gym.Env):
         return observation
 
     def move_unit(self, x, y):
+        #print("x: {0}, y: {1}".format(x, y))
         unit = self.getUnit(x, y)
 
         result = True
@@ -290,22 +286,23 @@ class StrategoEnv(gym.Env):
 
         result = self.move_unit(action[0], action[1])
         #print("result: ", result)
-        assert result != True, "invalid action was selected. Please select the action from possible_actions."
+        assert result != False, "invalid action was selected. Please select the action from possible_actions."
 
         info = {"step_phase": self.step_phase}
 
         return self.observation(), self.reward, self.done, info
 
     def step(self, action):
-        #print("step()")
         label = self.stratego_labels[action]
-        #print("label: ", label)
 
         label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
         ego_x = int(utils.letters.index(label[0]))
         ego_y = int(label[1]) - 1
         destinaion_x = int(utils.letters.index(label[2]))
         destinaion_y = int(label[3]) - 1
+
+        #print("ego_x: {0}, ego_y: {1}".format(ego_x, ego_y))
+        #print("destinaion_x: {0}, destinaion_y: {1}".format(destinaion_x, destinaion_y))
 
         unit = self.getUnit(ego_x, ego_y)
 
@@ -316,12 +313,12 @@ class StrategoEnv(gym.Env):
         (x, y) = select_unit.position
 
         small_observation, reward, done, info = self.small_step((x, y))
-        #self.update_screen()
-        #time.sleep(1.0)
+        self.update_screen()
+        time.sleep(0.5)
 
         small_observation, reward, done, info = self.small_step((destinaion_x, destinaion_y))
-        #self.update_screen()
-        #time.sleep(1.0)
+        self.update_screen()
+        time.sleep(0.5)
 
         if self.current_turn == 'r':
             self.current_turn = 'b'
@@ -380,14 +377,9 @@ class StrategoEnv(gym.Env):
             event_list = pygame.event.get()
             for event in event_list:
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    #print("(event.pos[0]: %d, event.pos[1]: %d)" % (event.pos[1], event.pos[1]))
-
                     x = int((event.pos[0] - 25) / self.tilePix)
                     y = int((event.pos[1] - 25) / self.tilePix)
-
-                    #print("(x: %d, y: %d)" % (x, y))
                     result = self.move_unit(x, y)
-                    #print("result: ", result)
 
                     info = {"step_phase": self.step_phase}
 
