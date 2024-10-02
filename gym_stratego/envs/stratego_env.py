@@ -78,7 +78,8 @@ class StrategoEnv(gym.Env):
         self.current_turn = 'r'
 
     def is_movable(self, unit):
-        """ Return a list of directly adjacent tile coordinates, considering the edge of the board and whether or not diagonal movement is enabled."""
+        """ Return a list of directly adjacent tile coordinates, considering the edge of the board and whether or not diagonal 
+        # movement is enabled."""
         (x, y) = unit.position
 
         if unit.rank != 11 and unit.rank != 0:
@@ -98,9 +99,14 @@ class StrategoEnv(gym.Env):
         return movable
 
     def get_unit_from_tag(self, tag_number):
-        for unit in self.redArmy.army:
-            if unit.tag_number == tag_number:
-                return unit
+        if self.turn == "Red":
+            for unit in self.redArmy.army:
+                if unit.tag_number == tag_number:
+                    return unit
+        else:
+            for unit in self.blueArmy.army:
+                if unit.tag_number == tag_number:
+                    return unit
 
     def get_movable_positions(self, tag_number):
         unit = self.get_unit_from_tag(tag_number)
@@ -121,38 +127,63 @@ class StrategoEnv(gym.Env):
         state = np.zeros((self.boardWidth, self.boardWidth, 1))
 
         movable_units = []
-        red_offboard = []
-        blue_offboard = []
-        blue_offboard_rank = []
-        red_offboard_rank = []
+        ego_offboard = []
+        oppo_offboard = []
+        ego_offboard_rank = []
+        oppo_offboard_rank = []
 
-        for unit in self.redArmy.army:
-            #print("unit.tag_number:%d, unit.rank: %d" % (unit.tag_number, unit.rank))
-            #movable = self.is_movable(unit)
-            unit.movable = False 
+        if self.turn == "Red":
+            for unit in self.redArmy.army:
+                unit.movable = False 
 
-            if unit.isOffBoard() == False:
-                x, y = unit.getPosition()
-                state[y, x, 0] = unit.rank
-            else:
-                red_offboard.append(unit.tag_number)
-                red_offboard_rank.append(unit.rank)
+                if unit.isOffBoard() == False:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = unit.rank
+                else:
+                    ego_offboard.append(unit.tag_number)
+                    ego_offboard_rank.append(unit.rank)
 
-            if unit.isOffBoard() == False:
-                if self.is_movable(unit):
-                    unit.movable = True
-                    movable_units.append(unit.tag_number)
+                if unit.isOffBoard() == False:
+                    if self.is_movable(unit):
+                        unit.movable = True
+                        movable_units.append(unit.tag_number)
 
-        for unit in self.blueArmy.army:
-            if unit.isOffBoard() == False and unit.isKnown == False:
-                x, y = unit.getPosition()
-                state[y, x, 0] = 12.0
-            elif unit.isOffBoard() == False and unit.isKnown:
-                x, y = unit.getPosition()
-                state[y, x, 0] = unit.rank + 12.0
-            else:
-                blue_offboard.append(unit.tag_number)
-                blue_offboard_rank.append(unit.rank)
+            for unit in self.blueArmy.army:
+                if unit.isOffBoard() == False and unit.isKnown == False:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = 12.0
+                elif unit.isOffBoard() == False and unit.isKnown:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = unit.rank + 12.0
+                else:
+                    oppo_offboard.append(unit.tag_number)
+                    oppo_offboard_rank.append(unit.rank)
+        else:
+            for unit in self.blueArmy.army:
+                unit.movable = False 
+
+                if unit.isOffBoard() == False:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = unit.rank
+                else:
+                    ego_offboard.append(unit.tag_number)
+                    ego_offboard_rank.append(unit.rank)
+
+                if unit.isOffBoard() == False:
+                    if self.is_movable(unit):
+                        unit.movable = True
+                        movable_units.append(unit.tag_number)
+
+            for unit in self.redArmy.army:
+                if unit.isOffBoard() == False and unit.isKnown == False:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = 12.0
+                elif unit.isOffBoard() == False and unit.isKnown:
+                    x, y = unit.getPosition()
+                    state[y, x, 0] = unit.rank + 12.0
+                else:
+                    oppo_offboard.append(unit.tag_number)
+                    oppo_offboard_rank.append(unit.rank)
 
         state[4, 2, 0] = 24.0
         state[4, 3, 0] = 24.0
@@ -173,9 +204,9 @@ class StrategoEnv(gym.Env):
         else:
             movable_positions = -1
 
-        observation = {'battle_field': state, 'red_offboard': red_offboard, 'blue_offboard': blue_offboard, 'movable_units' : movable_units,
-                       'clicked_unit': clicked_unit, 'movable_positions': movable_positions, 'red_offboard_rank': red_offboard_rank,
-                       'blue_offboard_rank': blue_offboard_rank}
+        observation = {'battle_field': state, 'ego_offboard': ego_offboard, 'oppo_offboard': oppo_offboard, 'movable_units' : movable_units,
+                       'clicked_unit': clicked_unit, 'movable_positions': movable_positions, 'ego_offboard_rank': ego_offboard_rank,
+                       'oppo_offboard_rank': oppo_offboard_rank}
 
         return observation
         
@@ -190,8 +221,8 @@ class StrategoEnv(gym.Env):
         observation = self.small_reset()
 
         battle_field = observation['battle_field'] 
-        red_offboard = observation['red_offboard']
-        blue_offboard = observation['blue_offboard']
+        ego_offboard = observation['ego_offboard']
+        oppo_offboard = observation['oppo_offboard']
         movable_units = observation['movable_units']
         clicked_unit = observation['clicked_unit']
         movable_positions = observation['movable_positions']
@@ -204,7 +235,8 @@ class StrategoEnv(gym.Env):
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
 
-            small_observation, reward, done, info = self.small_step((x, y))
+            self.small_step((x, y))
+            small_observation = self.observation()
 
             movable_positions = small_observation['movable_positions']
             for movable_position in movable_positions:
@@ -216,26 +248,30 @@ class StrategoEnv(gym.Env):
                 label_index = self.stratego_labels.index(label)
                 possible_actions.append(label_index)
 
-            small_observation, reward, done, info = self.small_step((x, y))
+            self.small_step((x, y))
+            small_observation = self.observation()
             #self.update_screen()
 
             unit_info[unit] = movable_positions
 
         #observation["unit_info"] = unit_info
         observation["battle_field"] = battle_field
-        observation["red_offboard"] = red_offboard
-        observation["blue_offboard"] = blue_offboard
+        observation["ego_offboard"] = ego_offboard
+        observation["oppo_offboard"] = oppo_offboard
         observation["possible_actions"] = possible_actions
-        observation["current_turn"] = self.current_turn
 
         return observation
 
     def move_unit(self, x, y):
+        #print("move_unit()")
         #print("x: {0}, y: {1}".format(x, y))
+
         unit = self.getUnit(x, y)
+        #print("unit: ", unit)
 
         result = True
         if self.unit_selected == False and unit:
+            #print("1. self.unit_selected == False and unit")
             if unit.rank == 11:
                 #print("bomb unit can not be selected")
                 return False
@@ -246,13 +282,14 @@ class StrategoEnv(gym.Env):
                 #print("this unit can not be selected")
                 return False
 
-            if unit.color == "Red":
+            if unit.color == self.turn:
                 unit.selected = True
                 self.unit_selected = True
                 self.clicked_unit = unit
                 self.step_phase = 2
         elif self.unit_selected == True and unit:
-            if unit.selected == True and unit.color == "Red":
+            #print("2. self.unit_selected == True and unit")
+            if unit.selected == True and unit.color == self.turn:
                 unit.selected = False
                 self.unit_selected = False
                 self.clicked_unit = None
@@ -268,7 +305,11 @@ class StrategoEnv(gym.Env):
                     self.clicked_unit.selected = False
 
                 self.clicked_unit = None
+
+                self.turn = self.otherPlayer(self.turn)
+                self.turnNr += 1
         elif self.unit_selected == True and self.clicked_unit:
+            #print("3. self.unit_selected == True and self.clicked_unit")
             result = self.moveUnit(x, y)
             self.clicked_unit.selected = False
             self.unit_selected = False
@@ -277,22 +318,23 @@ class StrategoEnv(gym.Env):
 
             self.step_phase = 1
 
+            self.turn = self.otherPlayer(self.turn)
+            self.turnNr += 1
+
         return result == True
 
     def small_step(self, action):
         if (action[0] == -1) or (action[1] == -1):
-            info = {"step_phase": self.step_phase}
-            return self.observation(), self.reward, self.done, info
+            return
 
         result = self.move_unit(action[0], action[1])
-        #print("result: ", result)
         assert result != False, "invalid action was selected. Please select the action from possible_actions."
 
-        info = {"step_phase": self.step_phase}
-
-        return self.observation(), self.reward, self.done, info
-
     def step(self, action):
+        #print("step()")
+
+        #print("self.turn 1: ", self.turn)
+
         label = self.stratego_labels[action]
 
         label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
@@ -312,13 +354,19 @@ class StrategoEnv(gym.Env):
 
         (x, y) = select_unit.position
 
-        small_observation, reward, done, info = self.small_step((x, y))
+        self.small_step((x, y))
         self.update_screen()
-        time.sleep(0.5)
+        time.sleep(2.0)
 
-        small_observation, reward, done, info = self.small_step((destinaion_x, destinaion_y))
+        #print("self.turn 2: ", self.turn)
+
+        self.small_step((destinaion_x, destinaion_y))
         self.update_screen()
-        time.sleep(0.5)
+        time.sleep(2.0)
+
+        #print("self.turn 3: ", self.turn)
+
+        small_observation = self.observation()
 
         if self.current_turn == 'r':
             self.current_turn = 'b'
@@ -326,8 +374,8 @@ class StrategoEnv(gym.Env):
             self.current_turn = 'r'
 
         battle_field = small_observation['battle_field']
-        red_offboard = small_observation['red_offboard']
-        blue_offboard = small_observation['blue_offboard']
+        ego_offboard = small_observation['ego_offboard']
+        oppo_offboard = small_observation['oppo_offboard']
         movable_units = small_observation['movable_units']
         clicked_unit = small_observation['clicked_unit']
         movable_positions = small_observation['movable_positions']
@@ -339,7 +387,8 @@ class StrategoEnv(gym.Env):
             select_unit = self.get_unit_from_tag(unit)
             (x, y) = select_unit.position
 
-            small_observation, reward, done, info = self.small_step((x, y))
+            self.small_step((x, y))
+            small_observation = self.observation()
             movable_positions = small_observation['movable_positions']
             for movable_position in movable_positions:
                 ego = (utils.letters[x], y + 1)
@@ -349,20 +398,22 @@ class StrategoEnv(gym.Env):
                 label_index = self.stratego_labels.index(label)
                 possible_actions.append(label_index)
 
-            small_observation, reward, done, info = self.small_step((x, y))
+            self.small_step((x, y))
+            small_observation = self.observation()
 
             unit_info[unit] = movable_positions
 
         #observation["unit_info"] = unit_info
         observation["battle_field"] = battle_field
-        observation["red_offboard"] = red_offboard
-        observation["blue_offboard"] = blue_offboard
+        observation["ego_offboard"] = ego_offboard
+        observation["oppo_offboard"] = oppo_offboard
         observation["possible_actions"] = possible_actions
-        observation["current_turn"] = self.current_turn
 
         self.update_screen()
 
-        return observation, reward, done, info
+        info = {"step_phase": self.step_phase}
+
+        return observation, self.reward, self.done, info
 
     def step_render(self):
         while True:
@@ -435,6 +486,8 @@ class StrategoEnv(gym.Env):
         return self.redArmy.getUnit(x, y) or self.blueArmy.getUnit(x, y)
 
     def moveUnit(self, x, y):
+        #print("moveUnit()")
+
         """Move a unit according to selected unit and clicked destination"""
         if not self.legalMove(self.clicked_unit, x, y):
             print("You can't move there! If you want, you can right click to deselect the currently selected unit.")
@@ -470,7 +523,8 @@ class StrategoEnv(gym.Env):
             else:
                 self.attack(self.clicked_unit, target)
                 if self.started:
-                    self.endTurn()
+                    #self.endTurn()
+                    pass
         else:
             #print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
             if (abs(self.clicked_unit.position[0] - x) + abs(self.clicked_unit.position[1] - y)) > 1 and self.clicked_unit.hasMovedFar != True:
@@ -499,7 +553,8 @@ class StrategoEnv(gym.Env):
             self.clicked_unit.hasMoved = True
 
         if self.started:
-            self.endTurn()
+            #self.endTurn()
+            pass
 
         return True
 
@@ -704,6 +759,8 @@ class StrategoEnv(gym.Env):
 
         if unit.color == "Red" and self.redArmy.getUnit(x, y):
             return False
+        elif unit.color == "Blue" and self.blueArmy.getUnit(x, y):
+            return False
 
         #if unit.rank == 11:
         #    return False
@@ -764,7 +821,7 @@ class StrategoEnv(gym.Env):
 
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
 
-        if unit.alive and unit.color == 'Red' :
+        if unit.alive and unit.color == self.turn:
             if unit.selected:
                 pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
@@ -776,21 +833,21 @@ class StrategoEnv(gym.Env):
                 else:
                     pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                     pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
-        elif unit.alive and unit.color == 'Blue':
+        elif unit.alive and unit.color != self.turn:
             if unit.isKnown == False:
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)))
             else:
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
-
-        if unit.color == 'Red':
+        
+        if unit.color == self.turn:
             screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
-        if (unit.color == 'Blue' and not unit.alive) or unit.isKnown:
+        if (unit.color != self.turn and not unit.alive) or unit.isKnown:
             screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
-        if (unit.name != "Bomb" and unit.name != "Flag" and unit.color == 'Red') or unit.isKnown:
+        if (unit.name != "Bomb" and unit.name != "Flag" and unit.color == self.turn) or unit.isKnown:
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
             screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
 
@@ -858,34 +915,34 @@ class StrategoEnv(gym.Env):
 
         my_font = pygame.font.SysFont('Comic Sans MS', 50)
         text_surface = my_font.render('a', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 0, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 0, 0))
 
         text_surface = my_font.render('b', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 1, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 1, 0))
 
         text_surface = my_font.render('c', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 2, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 2, 0))
 
         text_surface = my_font.render('d', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 3, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 3, 0))
 
         text_surface = my_font.render('e', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 4, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 4, 0))
 
         text_surface = my_font.render('f', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 5, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 5, 0))
 
         text_surface = my_font.render('g', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 6, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 6, 0))
 
         text_surface = my_font.render('h', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 7, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 7, 0))
 
         text_surface = my_font.render('i', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 8, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 8, 0))
 
         text_surface = my_font.render('j', False, (255, 255, 255))
-        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 9, 15))
+        self.MAIN_SCREEN.blit(text_surface, (25 + 75 + 120 * 9, 0))
 
         text_surface = my_font.render('1', False, (255, 255, 255))
         self.MAIN_SCREEN.blit(text_surface, (15, 20 + 75 + 120 * 0))

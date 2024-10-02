@@ -24,26 +24,22 @@ for episode in range(0, 100):
             start = time.time()
 
             battle_field = observation['battle_field']
-            #print("battle_field.shape: ", battle_field.shape)
+            print("battle_field.shape: ", battle_field.shape)
 
-            red_battle_field = np.reshape(battle_field, (10, 10))
-            #print(battle_field)
-
-            current_turn = observation["current_turn"]
-            #print("current_turn: ", current_turn)
+            battle_field = np.reshape(battle_field, (10, 10))
+            print(battle_field)
 
             possible_actions = observation['possible_actions']
-            #print("possible_actions: ", possible_actions)
+            print("possible_actions: ", possible_actions)
 
-            red_offboard = observation['red_offboard']
+            ego_offboard = observation['ego_offboard']
             #print("red_offboard: ", red_offboard)
 
-            blue_offboard = observation['blue_offboard']
+            oppo_offboard = observation['oppo_offboard']
             #print("blue_offboard: ", blue_offboard)
 
             action = random.choice(possible_actions)
-            #action = possible_actions[-1]
-            #print("action: ", action)
+            print("action: ", action)
 
             observation, reward, done, info = env.step(action)
 
@@ -52,14 +48,18 @@ for episode in range(0, 100):
             #print("")
         else:
             observation, reward, done, info = env.step_render()
+            #print(info)
 
             battle_field = observation['battle_field']
             battle_field = np.reshape(battle_field, (10, 10))
             print(battle_field)
             #print("battle_field.shape: ", battle_field.shape)
 
-            blue_offboard = observation['blue_offboard']
-            #print("blue_offboard: ", blue_offboard)
+            ego_offboard = observation['ego_offboard']
+            #print("ego_offboard: ", ego_offboard)
+
+            oppo_offboard = observation['oppo_offboard']
+            #print("oppo_offboard: ", oppo_offboard)
 
             movable_units = observation['movable_units']
             #print("movable_units: ", movable_units)
@@ -68,13 +68,13 @@ for episode in range(0, 100):
             #print("clicked_unit: ", clicked_unit)
 
             movable_positions = observation['movable_positions']
-            #print("movable_positions: ", movable_positions)
+            print("movable_positions: ", movable_positions)
 
-            red_offboard_rank = observation['red_offboard_rank']
-            #print("red_offboard_rank: ", red_offboard_rank)
+            ego_offboard_rank = observation['ego_offboard_rank']
+            #print("ego_offboard_rank: ", ego_offboard_rank)
 
-            blue_offboard_rank = observation['blue_offboard_rank']
-            #print("blue_offboard_rank: ", blue_offboard_rank)
+            oppo_offboard_rank = observation['oppo_offboard_rank']
+            #print("oppo_offboard_rank: ", oppo_offboard_rank)
 
         if done:
             print("reward: ", reward)
