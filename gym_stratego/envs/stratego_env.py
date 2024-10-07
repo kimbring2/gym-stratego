@@ -265,13 +265,11 @@ class StrategoEnv(gym.Env):
     def move_unit(self, x, y):
         #print("move_unit()")
         #print("x: {0}, y: {1}".format(x, y))
-
         unit = self.getUnit(x, y)
-        #print("unit: ", unit)
+        #print("unit: {0}".format(unit))
 
         result = True
         if self.unit_selected == False and unit:
-            #print("1. self.unit_selected == False and unit")
             if unit.rank == 11:
                 #print("bomb unit can not be selected")
                 return False
@@ -288,7 +286,6 @@ class StrategoEnv(gym.Env):
                 self.clicked_unit = unit
                 self.step_phase = 2
         elif self.unit_selected == True and unit:
-            #print("2. self.unit_selected == True and unit")
             if unit.selected == True and unit.color == self.turn:
                 unit.selected = False
                 self.unit_selected = False
@@ -309,7 +306,6 @@ class StrategoEnv(gym.Env):
                 self.turn = self.otherPlayer(self.turn)
                 self.turnNr += 1
         elif self.unit_selected == True and self.clicked_unit:
-            #print("3. self.unit_selected == True and self.clicked_unit")
             result = self.moveUnit(x, y)
             self.clicked_unit.selected = False
             self.unit_selected = False
@@ -332,9 +328,6 @@ class StrategoEnv(gym.Env):
 
     def step(self, action):
         #print("step()")
-
-        #print("self.turn 1: ", self.turn)
-
         label = self.stratego_labels[action]
 
         label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
@@ -358,13 +351,9 @@ class StrategoEnv(gym.Env):
         self.update_screen()
         time.sleep(2.0)
 
-        #print("self.turn 2: ", self.turn)
-
         self.small_step((destinaion_x, destinaion_y))
         self.update_screen()
         time.sleep(2.0)
-
-        #print("self.turn 3: ", self.turn)
 
         small_observation = self.observation()
 
@@ -523,7 +512,8 @@ class StrategoEnv(gym.Env):
             else:
                 self.attack(self.clicked_unit, target)
                 if self.started:
-                    #self.endTurn()
+                    #print("self.endTurn()")
+                    self.endTurn()
                     pass
         else:
             #print("Moved %s to (%s, %s)" % (self.clicked_unit, x, y))
@@ -553,7 +543,8 @@ class StrategoEnv(gym.Env):
             self.clicked_unit.hasMoved = True
 
         if self.started:
-            #self.endTurn()
+            #print("self.endTurn()")
+            self.endTurn()
             pass
 
         return True
@@ -705,8 +696,8 @@ class StrategoEnv(gym.Env):
 
     def endTurn(self):
         """Switch turn to other player and check for end of game conditions"""
-        self.turn = self.otherPlayer(self.turn)
-        self.turnNr += 1
+        #self.turn = self.otherPlayer(self.turn)
+        #self.turnNr += 1
 
         if self.brains[self.turn] and not self.won:  # computer player?
             (oldlocation, move) = self.brains[self.turn].findMove()
@@ -715,20 +706,22 @@ class StrategoEnv(gym.Env):
             if move == None:
                 self.victory(self.otherPlayer(self.turn), True)
                 return
+            else:
+                print("no victory")
 
-            unit = self.getUnit(oldlocation[0], oldlocation[1])
-            unit.hasMoved = True
+            #unit = self.getUnit(oldlocation[0], oldlocation[1])
+            #unit.hasMoved = True
 
             # Do move animation
-            stepSize = self.tilePix / MOVE_ANIM_STEPS
-            dx = move[0] - oldlocation[0]
-            dy = move[1] - oldlocation[1]
+            #stepSize = self.tilePix / MOVE_ANIM_STEPS
+            #dx = move[0] - oldlocation[0]
+            #dy = move[1] - oldlocation[1]
 
-            enemy = self.getUnit(move[0], move[1])
-            if enemy:
-                self.attack(unit, enemy)
-            else:
-                unit.setPosition(move[0], move[1])
+            #enemy = self.getUnit(move[0], move[1])
+            #if enemy:
+            #    self.attack(unit, enemy)
+            #else:
+            #    unit.setPosition(move[0], move[1])
 
             # check if player can move
             tempBrain = randomBrain.Brain(self, self.redArmy, self.boardWidth)
@@ -736,6 +729,8 @@ class StrategoEnv(gym.Env):
             if playerMove[0] == None:
                 self.victory(self.turn, True)
                 return
+            else:
+                print("no victory")
 
             if self.difficulty == "Easy":
                 for unit in self.redArmy.army:
@@ -744,7 +739,7 @@ class StrategoEnv(gym.Env):
 
             ##print("%s moves unit at (%s,%s) to (%s,%s)" % (self.turn, oldlocation[0], oldlocation[1], move[0], move[1]))
 
-        self.turn = self.otherPlayer(self.turn)
+        #self.turn = self.otherPlayer(self.turn)
 
     def legalMove(self, unit, x, y):
         if self.isPool(x, y):
