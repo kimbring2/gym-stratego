@@ -3,7 +3,7 @@ An OpenAI Gym for the Python implementaion of the [Stratego board game](https://
 
 <img src="images/stratego_logo.png" width="400">
 
-The DeepMind uses the Stratego game as enviroment at the paper titled [Mastering Stratego, the classic game of imperfect information](https://www.deepmind.com/blog/mastering-stratego-the-classic-game-of-imperfect-information). At this paper, they used the algorithm called DeepNash to find the Nash equilibrium when training the agent using Deep Reinformance Learning. 
+The DeepMind uses the Stratego game as enviroment at the paper titled [Mastering Stratego, the classic game of imperfect information](https://www.deepmind.com/blog/mastering-stratego-the-classic-game-of-imperfect-information). At this paper, they used the algorithm called DeepNash to find the Nash equilibrium when training the agent using the Deep Reinforment Learning.
 
 # Reference
 - Custom OpenAI Gym code: https://github.com/vadim0x60/heartpole
@@ -27,12 +27,17 @@ $ sudo apt-get install python3.9-tk
 # Observation of off-board unit 
 <img src="images/red_blue_offboard.png" width="700">
 
-# Test Code
+# Environment test code
 After installing, please run the [environment test code](https://github.com/kimbring2/gym-stratego/blob/main/examples/stratego_env_test.py). There are two options you can choose, enemy_ai and human_play.
 
-For example, you can play with the built-in AI using command below.
+For example, you can play with the built-in AI using the command below.
+
 ```
 python stratego_env_test.py --enemy_ai True --human_play True
 ```
 
+# Agent train code
+First, I trained the agent on the [built-in AI​](https://github.com/kimbring2/gym-stratego/tree/main/gym_stratego/envs/brains) in the original code.
+## Network architecture
+<img src="images/network_architecture.png" width="700">
 
