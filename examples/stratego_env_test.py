@@ -12,8 +12,8 @@ import utils
 env = gym.make("stratego-v0")
 print("env.action_space.n: ", env.action_space.n)
  
-enemy_ai = True
-human_play = False
+enemy_ai = False
+human_play = True
 
 
 for episode in range(0, 100):

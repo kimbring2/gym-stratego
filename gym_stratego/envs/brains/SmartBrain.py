@@ -20,11 +20,14 @@ class Brain(Brain.Brain):
         if boardwidth: BOARD_WIDTH = boardwidth
 
     def placeArmy(self, armyHeight):
+        #print("placeArmy()")
+
         if (armyHeight > 3):
             tactic = randint(1,4)
         else: 
             tactic = randint(0,1)
-        #tactic = 2
+
+        tactic = 0
         
         positions = []
         bombPos = []
@@ -33,7 +36,7 @@ class Brain(Brain.Brain):
 
         if self.army.color == "Blue":
             rows = range(armyHeight)
-            backrow = 0
+            backrow = 1
             frontrow = armyHeight-1
             direction = 1
         else:
@@ -47,22 +50,28 @@ class Brain(Brain.Brain):
                 if self.army.getUnit(column, row) == None:
                     positions += [(column, row)]
         
-        shuffle(positions)
+        #shuffle(positions)
 
         ####################################################################################################################################
         #Tactic 0: Just put the flag in the back row
         if tactic == 0:
-            xpos = randint(0, BOARD_WIDTH-1)
+            #print("BOARD_WIDTH: ", BOARD_WIDTH)
+            #xpos = randint(0, BOARD_WIDTH-1)
+            xpos = 5
+            #print("backrow: ", backrow)
             flagPos = (xpos, backrow)
-
+            #flagPos = (xpos, 1)
         ####################################################################################################################################
         elif tactic == 1:
-            #Tactic 1: Flag in a back corner and 2 bombs around it. And if possible a boobytrap bomb cluster in other corner
+            # Tactic 1: Flag in a back corner and 2 bombs around it. And if possible a boobytrap bomb cluster in other corner
             side = randint(0,3)
-            self.army.flagIsBombProtected = True
+            side = 0
+            self.army.flagIsBombProtected = False
 
             if side == 0: 
+                #print("backrow: ", backrow)
                 flagPos  = (0, backrow) 
+
                 bombPos += [(1, backrow)] 
                 bombPos += [(0, backrow + direction)]
             elif side == 1:
@@ -85,7 +94,6 @@ class Brain(Brain.Brain):
                 if (armyHeight > 3):
                     bombPos += [(1, backrow)] 
                     bombPos += [(0, backrow + direction)]
-
         ####################################################################################################################################
         elif tactic == 2: # Flag in a corner and 6 bombs and sergeants around it
             side = randint(0,1)
@@ -113,8 +121,8 @@ class Brain(Brain.Brain):
                 sergPos += [(BOARD_WIDTH-1, backrow + direction * 2)]
                 bombPos += [(BOARD_WIDTH-2, backrow + direction * 2)]
                 bombPos += [(BOARD_WIDTH-1, backrow + direction * 3)]
-       ####################################################################################################################################
-        elif tactic == 3: #Flag on back row and 3 bombs around it
+        ####################################################################################################################################
+        elif tactic == 3: # Flag on back row and 3 bombs around it
             xpos = randint(2, BOARD_WIDTH-3)
             self.army.flagIsBombProtected = True
 
@@ -122,9 +130,8 @@ class Brain(Brain.Brain):
             bombPos += [(xpos-1, backrow)]
             bombPos += [(xpos+1, backrow)]
             bombPos += [(xpos, backrow + direction)]
-
         ####################################################################################################################################
-        elif tactic == 4: #Flag behind a lake and some bombs around it
+        elif tactic == 4: # Flag behind a lake and some bombs around it
             posFlagCol = []
 
             for column in range(BOARD_WIDTH):
@@ -140,6 +147,7 @@ class Brain(Brain.Brain):
         ####################################################################################################################################
         ####################################################################################################################################
 
+        #print("flagPos: ", flagPos)
         positions.remove(flagPos)
         for bp in bombPos:
             positions.remove(bp)
@@ -153,11 +161,13 @@ class Brain(Brain.Brain):
         # Scouts and bombs on front row and not behind the lakes:
         for column in range(BOARD_WIDTH):
             if positions.__contains__((column, frontrow)) and not self.game.isPool(column, frontrow + direction):
-                bool = randint(0,1)
+                #bool = randint(0,1)
+                bool = 0
                 if bool == 0 and self.army.nr_of_bombs-len(bombPos) > 1:
                     bombPos += [(column, frontrow)]
                 else:
                     scoutPos += [(column, frontrow)]
+                    
                 positions.remove((column, frontrow))
                 
         for i, unit in enumerate(self.army.army):
