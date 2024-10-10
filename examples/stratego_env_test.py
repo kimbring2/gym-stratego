@@ -3,17 +3,21 @@ import time
 import cv2
 import numpy as np
 import random
+import argparse
 
 from gym_stratego.envs import StrategoEnv
 import gym_stratego
 from gym_stratego.envs.constants import *
-import utils
+
+parser = argparse.ArgumentParser(description='')
+parser.add_argument('--enemy_ai', type=bool, default=False, help='AI Enemy')
+parser.add_argument('--human_play', type=bool, default=True, help='Play as human')
+arguments = parser.parse_args()
 
 env = gym.make("stratego-v0")
-print("env.action_space.n: ", env.action_space.n)
  
-enemy_ai = False
-human_play = True
+enemy_ai = arguments.enemy_ai
+human_play = arguments.human_play
 
 
 for episode in range(0, 100):
@@ -26,11 +30,6 @@ for episode in range(0, 100):
 
     step = 0
     while True:
-        #print("step: ", step)
-        #print("env.turn: ", env.turn)
-        #print("env.step_phase: ", env.step_phase)
-
-        #time.sleep(1.0)
         env.update_screen()
             
         if human_play == False:
@@ -43,9 +42,7 @@ for episode in range(0, 100):
                     observation, _, _, info = env.small_observation()
                     done = env.done
                     reward = env.reward
-                    print("done 1: ", done)
                     if done:
-                        print("reward 1: ", reward)
                         break
                 else:
                     battle_field = observation['battle_field']
@@ -56,33 +53,22 @@ for episode in range(0, 100):
                     action = random.choice(possible_actions)
                     observation, _, _, info = env.step(action)
             else:
-                #print("observation 2: ", observation)
                 battle_field = observation['battle_field']
                 battle_field = np.reshape(battle_field, (10, 10))
-                #print(battle_field)
 
                 battle_field = np.reshape(battle_field, (10, 10))
-                #print(battle_field)
 
                 possible_actions = observation['possible_actions']
-                #print("possible_actions: ", possible_actions)
 
                 ego_offboard = observation['ego_offboard']
-                #print("ego_offboard: ", ego_offboard)
 
                 oppo_offboard = observation['oppo_offboard']
-                #print("oppo_offboard: ", oppo_offboard)
 
                 action = random.choice(possible_actions)
-                #action = 1788
-                #print("action: ", action)
                 observation, _, _, info = env.step(action)
                 done = env.done
                 reward = env.reward
-                print("done 2: ", done)
-                print("")
                 if done:
-                    print("reward 2: ", reward)
                     break
         else:
             if env.turn == 'Blue' and env.step_phase == 1:
@@ -103,29 +89,14 @@ for episode in range(0, 100):
 
                 battle_field = observation['battle_field']
                 battle_field = np.reshape(battle_field, (10, 10))
-                #print(battle_field)
-                #print("battle_field.shape: ", battle_field.shape)
 
                 ego_offboard = observation['ego_offboard']
-                #print("ego_offboard: ", ego_offboard)
-
                 oppo_offboard = observation['oppo_offboard']
-                #print("oppo_offboard: ", oppo_offboard)
-
                 movable_units = observation['movable_units']
-                #print("movable_units: ", movable_units)
-
                 clicked_unit = observation['clicked_unit']
-                #print("clicked_unit: ", clicked_unit)
-
                 movable_positions = observation['movable_positions']
-                #print("movable_positions: ", movable_positions)
-
                 ego_offboard_rank = observation['ego_offboard_rank']
-                #print("ego_offboard_rank: ", ego_offboard_rank)
-
                 oppo_offboard_rank = observation['oppo_offboard_rank']
-                #print("oppo_offboard_rank: ", oppo_offboard_rank)
 
         step += 1
 
