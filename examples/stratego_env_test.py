@@ -7,50 +7,83 @@ import random
 from gym_stratego.envs import StrategoEnv
 import gym_stratego
 from gym_stratego.envs.constants import *
+import utils
 
 env = gym.make("stratego-v0")
 print("env.action_space.n: ", env.action_space.n)
  
 enemy_ai = True
-human_play = True
+human_play = False
+
 
 for episode in range(0, 100):
+    print("episode: ", episode)
+
     observation = env.reset()
 
+    done = False
     move = None
 
     step = 0
     while True:
-        print("step: ", step)
-        print("env.turn: ", env.turn)
-        print("env.step_phase: ", env.step_phase)
-        
+        #print("step: ", step)
+        #print("env.turn: ", env.turn)
+        #print("env.step_phase: ", env.step_phase)
+
+        #time.sleep(1.0)
+        env.update_screen()
+            
         if human_play == False:
-            start = time.time()
+            if env.turn == 'Blue':
+                if enemy_ai == True:
+                    (oldlocation, move) = env.brains[env.turn].findMove()
+                    result = env.move_unit(oldlocation[0], oldlocation[1])
+                    result = env.move_unit(move[0], move[1])
 
-            battle_field = observation['battle_field']
-            print("battle_field.shape: ", battle_field.shape)
+                    observation, _, _, info = env.small_observation()
+                    done = env.done
+                    reward = env.reward
+                    print("done 1: ", done)
+                    if done:
+                        print("reward 1: ", reward)
+                        break
+                else:
+                    battle_field = observation['battle_field']
+                    battle_field = np.reshape(battle_field, (10, 10))
+                    possible_actions = observation['possible_actions']
+                    ego_offboard = observation['ego_offboard']
+                    oppo_offboard = observation['oppo_offboard']
+                    action = random.choice(possible_actions)
+                    observation, _, _, info = env.step(action)
+            else:
+                #print("observation 2: ", observation)
+                battle_field = observation['battle_field']
+                battle_field = np.reshape(battle_field, (10, 10))
+                #print(battle_field)
 
-            battle_field = np.reshape(battle_field, (10, 10))
-            print(battle_field)
+                battle_field = np.reshape(battle_field, (10, 10))
+                #print(battle_field)
 
-            possible_actions = observation['possible_actions']
-            print("possible_actions: ", possible_actions)
+                possible_actions = observation['possible_actions']
+                #print("possible_actions: ", possible_actions)
 
-            ego_offboard = observation['ego_offboard']
-            print("ego_offboard: ", ego_offboard)
+                ego_offboard = observation['ego_offboard']
+                #print("ego_offboard: ", ego_offboard)
 
-            oppo_offboard = observation['oppo_offboard']
-            print("oppo_offboard: ", oppo_offboard)
+                oppo_offboard = observation['oppo_offboard']
+                #print("oppo_offboard: ", oppo_offboard)
 
-            action = random.choice(possible_actions)
-            print("action: ", action)
-
-            observation, reward, done, info = env.step(action)
-
-            end = time.time()
-            #print("elapsed time: ", end - start)
-            #print("")
+                action = random.choice(possible_actions)
+                #action = 1788
+                #print("action: ", action)
+                observation, _, _, info = env.step(action)
+                done = env.done
+                reward = env.reward
+                print("done 2: ", done)
+                print("")
+                if done:
+                    print("reward 2: ", reward)
+                    break
         else:
             if env.turn == 'Blue' and env.step_phase == 1:
                 if enemy_ai == True:
@@ -94,14 +127,8 @@ for episode in range(0, 100):
                 oppo_offboard_rank = observation['oppo_offboard_rank']
                 #print("oppo_offboard_rank: ", oppo_offboard_rank)
 
-        if done:
-            print("reward: ", reward)
-            print("done: ", done)
-            break
-
         step += 1
 
         #time.sleep(1.0)
-        print("")
 
 env.close()
