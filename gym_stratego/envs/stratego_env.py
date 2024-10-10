@@ -436,7 +436,7 @@ class StrategoEnv(gym.Env):
         tempBrain.placeArmy(self.armyHeight)
 
         self.redBrain = 0
-        self.blueBrain = eval("randomBrainReverse")
+        self.blueBrain = eval("SmartBrain")
 
         self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
         self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
