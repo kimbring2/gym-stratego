@@ -27,71 +27,12 @@ $ sudo apt-get install python3.9-tk
 # Observation of off-board unit 
 <img src="images/red_blue_offboard.png" width="700">
 
-# Example Code
+# Test Code
+After installing, please run the [environment test code](https://github.com/kimbring2/gym-stratego/blob/main/examples/stratego_env_test.py). There are two options you can choose, enemy_ai and human_play.
+
+For example, you can play with the built-in AI using command below.
 ```
-import gym
-import time
-import cv2
-import numpy as np
-import random
-
-from gym_stratego.envs import StrategoEnv
-import gym_stratego
-
-env = gym.make("stratego-v0")
-
-for episode in range(0, 100):
-    observation = env.reset()
-
-    while True:
-        battle_field = observation['battle_field']
-        current_turn = observation["current_turn"]
-        possible_actions = observation['possible_actions']
-        red_offboard = observation['red_offboard']
-        blue_offboard = observation['blue_offboard']
-        action = random.choice(possible_actions)
-        observation, reward, done, info = env.step(action)
-        if done:
-            break
-
-env.close()
+python stratego_env_test.py --enemy_ai True --human_play True
 ```
 
-# Play as human
-It is possible to play the game manually. Please change the ```env.step(action)``` part as of code as ```env.step_render()```.
 
-Below is a demo video for that.
-
-[![human play](https://img.youtube.com/vi/QlrTqNp1R3U/sddefault.jpg)](https://youtu.be/QlrTqNp1R3U "Play as human video - Click to Watch!")
-<strong>Click to Watch!</strong>
-
-```
-import gym
-import time
-import cv2
-import numpy as np
-import random
-
-from gym_stratego.envs import StrategoEnv
-import gym_stratego
-
-env = gym.make("stratego-v0")
-
-for episode in range(0, 100):
-    observation = env.reset()
-
-    while True:
-        observation, reward, done, info = env.step_render()
-
-        battle_field = observation['battle_field']
-        blue_offboard = observation['blue_offboard']
-        movable_units = observation['movable_units']
-        clicked_unit = observation['clicked_unit']
-        movable_positions = observation['movable_positions']
-        red_offboard_rank = observation['red_offboard_rank']
-        blue_offboard_rank = observation['blue_offboard_rank']
-        if done:
-            break
-
-env.close()
-```
