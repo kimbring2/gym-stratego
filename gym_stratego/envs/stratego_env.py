@@ -75,7 +75,10 @@ class StrategoEnv(gym.Env):
 
         self.stratego_labels = utils.create_stratego_labels()
         self.action_space = spaces.Discrete(len(self.stratego_labels))
-        self.current_turn = 'r'
+
+    def isPoolColumn(self, x):
+        """Check whether there is a pool in column x"""
+        return sin(2 * pi * (x + .5) / BOARD_WIDTH * (POOLS + 0.5)) < 0
 
     def is_movable(self, unit):
         """ Return a list of directly adjacent tile coordinates, considering the edge of the board and whether or not diagonal 
@@ -124,7 +127,7 @@ class StrategoEnv(gym.Env):
         return movable_positions
 
     def observation(self):
-        state = np.zeros((self.boardWidth, self.boardWidth, 1))
+        state = np.ones((self.boardWidth, self.boardWidth, 1)) * 25.0
 
         movable_units = []
         ego_offboard = []
@@ -264,6 +267,7 @@ class StrategoEnv(gym.Env):
 
     def move_unit(self, x, y):
         #print("move_unit()")
+        #print("self.step_phase: ", self.step_phase)
         #print("x: {0}, y: {1}".format(x, y))
         unit = self.getUnit(x, y)
         #print("unit: {0}".format(unit))
@@ -305,6 +309,7 @@ class StrategoEnv(gym.Env):
 
                 self.turn = self.otherPlayer(self.turn)
                 self.turnNr += 1
+
         elif self.unit_selected == True and self.clicked_unit:
             result = self.moveUnit(x, y)
             self.clicked_unit.selected = False
@@ -326,41 +331,8 @@ class StrategoEnv(gym.Env):
         result = self.move_unit(action[0], action[1])
         assert result != False, "invalid action was selected. Please select the action from possible_actions."
 
-    def step(self, action):
-        #print("step()")
-        label = self.stratego_labels[action]
-
-        label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
-        ego_x = int(utils.letters.index(label[0]))
-        ego_y = int(label[1]) - 1
-        destinaion_x = int(utils.letters.index(label[2]))
-        destinaion_y = int(label[3]) - 1
-
-        #print("ego_x: {0}, ego_y: {1}".format(ego_x, ego_y))
-        #print("destinaion_x: {0}, destinaion_y: {1}".format(destinaion_x, destinaion_y))
-
-        unit = self.getUnit(ego_x, ego_y)
-
-        unit_tag = unit.tag_number
-
-        select_unit = self.get_unit_from_tag(unit_tag)
-
-        (x, y) = select_unit.position
-
-        self.small_step((x, y))
-        self.update_screen()
-        time.sleep(2.0)
-
-        self.small_step((destinaion_x, destinaion_y))
-        self.update_screen()
-        time.sleep(2.0)
-
+    def small_observation(self):
         small_observation = self.observation()
-
-        if self.current_turn == 'r':
-            self.current_turn = 'b'
-        else:
-            self.current_turn = 'r'
 
         battle_field = small_observation['battle_field']
         ego_offboard = small_observation['ego_offboard']
@@ -392,27 +364,54 @@ class StrategoEnv(gym.Env):
 
             unit_info[unit] = movable_positions
 
-        #observation["unit_info"] = unit_info
         observation["battle_field"] = battle_field
         observation["ego_offboard"] = ego_offboard
         observation["oppo_offboard"] = oppo_offboard
         observation["possible_actions"] = possible_actions
 
-        self.update_screen()
+        #self.update_screen()
 
         info = {"step_phase": self.step_phase}
 
         return observation, self.reward, self.done, info
 
+    def step(self, action):
+        label = self.stratego_labels[action]
+
+        label = re.split(r'(?<=\D)(?=\d)|(?<=\d)(?=\D)', label)
+        ego_x = int(utils.letters.index(label[0]))
+        ego_y = int(label[1]) - 1
+        destinaion_x = int(utils.letters.index(label[2]))
+        destinaion_y = int(label[3]) - 1
+
+        unit = self.getUnit(ego_x, ego_y)
+        #print("unit: ", unit)
+
+        unit_tag = unit.tag_number
+
+        select_unit = self.get_unit_from_tag(unit_tag)
+
+        (x, y) = select_unit.position
+
+        self.small_step((x, y))
+        #self.update_screen()
+        #time.sleep(2.0)
+
+        #print("destinaion_x: {0}, destinaion_y: {1}".format(destinaion_x, destinaion_y))
+        self.small_step((destinaion_x, destinaion_y))
+        #self.update_screen()
+        #time.sleep(2.0)
+
+        #observation, reward, done, info = self.small_observation()
+        small_observation = self.small_observation()
+
+        info = {"step_phase": self.step_phase}
+
+        return small_observation, self.reward, self.done, info
+
     def step_render(self):
         while True:
             self.update_screen()
-
-            if self.step_phase == 3:
-                self.step_phase = 1
-                break
-            elif self.step_phase == 2:
-                pass
 
             event_list = pygame.event.get()
             for event in event_list:
@@ -437,7 +436,7 @@ class StrategoEnv(gym.Env):
         tempBrain.placeArmy(self.armyHeight)
 
         self.redBrain = 0
-        self.blueBrain = eval("SmartBrain")
+        self.blueBrain = eval("randomBrainReverse")
 
         self.braintypes = {"Blue": self.blueBrain, "Red": self.redBrain}
         self.brains = {"Blue": self.braintypes["Blue"].Brain(self, self.blueArmy, self.boardWidth) if self.braintypes["Blue"] else 0,
@@ -550,6 +549,8 @@ class StrategoEnv(gym.Env):
         return True
 
     def victory(self, color, noMoves=False):
+        print("victory: ", color)
+
         """Show the victory/defeat screen"""
         self.won = True
         if color == "Red":
@@ -558,14 +559,14 @@ class StrategoEnv(gym.Env):
             else:
                 messageTxt = "Congratulations! You've captured the enemy flag!"
 
-            self.reward = (1, 0)
+            self.reward = (1, -1)
         else:
             if noMoves:
                 messageTxt = "There are no valid moves left. You lose."
             else:
                 messageTxt = "Unfortunately, the enemy has captured your flag. You lose."
 
-            self.reward = (0, 1)
+            self.reward = (-1, 1)
 
         casualties = len(self.redArmy.army) - self.redArmy.nrAlive()
         #print("%s has won the game in %i turns!" % (color, self.turnNr))
@@ -705,9 +706,10 @@ class StrategoEnv(gym.Env):
             # check if the opponent can move
             if move == None:
                 self.victory(self.otherPlayer(self.turn), True)
-                return
+                return True
             else:
-                print("no victory")
+                #print("no victory")
+                pass
 
             #unit = self.getUnit(oldlocation[0], oldlocation[1])
             #unit.hasMoved = True
@@ -728,9 +730,10 @@ class StrategoEnv(gym.Env):
             playerMove = tempBrain.findMove()
             if playerMove[0] == None:
                 self.victory(self.turn, True)
-                return
+                return True
             else:
-                print("no victory")
+                #print("no victory")
+                pass
 
             if self.difficulty == "Easy":
                 for unit in self.redArmy.army:
@@ -740,6 +743,7 @@ class StrategoEnv(gym.Env):
             ##print("%s moves unit at (%s,%s) to (%s,%s)" % (self.turn, oldlocation[0], oldlocation[1], move[0], move[1]))
 
         #self.turn = self.otherPlayer(self.turn)
+        return False
 
     def legalMove(self, unit, x, y):
         if self.isPool(x, y):
@@ -817,6 +821,7 @@ class StrategoEnv(gym.Env):
         DEFAULT_IMAGE_POSITION = (x * self.tilePix, y * self.tilePix)
 
         if unit.alive and unit.color == self.turn:
+        #if unit.alive and unit.color == "Red":
             if unit.selected:
                 pygame.draw.rect(self.BATTLE_SCREEN, hilight, 
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 5)
@@ -829,6 +834,7 @@ class StrategoEnv(gym.Env):
                     pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                     pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
         elif unit.alive and unit.color != self.turn:
+        #elif unit.alive and unit.color != "Red":
             if unit.isKnown == False:
                 pygame.draw.rect(self.BATTLE_SCREEN, color, 
                                 pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)))
@@ -837,12 +843,15 @@ class StrategoEnv(gym.Env):
                                  pygame.Rect(int(x * self.tilePix), int(y * self.tilePix), int(self.tilePix), int(self.tilePix)), 2)
         
         if unit.color == self.turn:
+        #if unit.color == "Red":
             screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
         if (unit.color != self.turn and not unit.alive) or unit.isKnown:
+        #if (unit.color != "Red" and not unit.alive) or unit.isKnown:
             screen.blit(self.unitIcons.getIcon(unit.name), DEFAULT_IMAGE_POSITION)
 
         if (unit.name != "Bomb" and unit.name != "Flag" and unit.color == self.turn) or unit.isKnown:
+        #if (unit.name != "Bomb" and unit.name != "Flag" and unit.color == "Red") or unit.isKnown:
             text_surface = self.my_font.render(str(unit.rank), False, (255, 238, 102))
             screen.blit(text_surface, ((x + .1) * self.tilePix, (y + .1) * self.tilePix))
 
