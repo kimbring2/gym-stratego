@@ -48,4 +48,4 @@ First, I trained the agent against the [built-in AI​](https://github.com/kimbr
 Because I am experimenting with AI that is as easy as possible and increasing the level of difficulty one by one, it cannot be said that it shows the same performance as DeepMind's original paper.
 
 For example, in the case of AI where the location of each unit is fixed, it was confirmed that learning was successful even without using DeepNash.
-<img src="images/training_result" width="700">
+<img src="images/training_result.png" width="700">
