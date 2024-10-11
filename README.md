@@ -24,6 +24,9 @@ $ sudo apt-get install python3.9-tk
 # Observation and Action
 <img src="images/observation_action.png" width="700">
 
+# Reward
+The 1 and -1 will be given to the winner and loser at the end of the game respectively.
+
 # Observation of off-board unit 
 <img src="images/red_blue_offboard.png" width="700">
 
@@ -37,7 +40,12 @@ python stratego_env_test.py --enemy_ai True --human_play True
 ```
 
 # Agent train code
-First, I trained the agent on the [built-in AI​](https://github.com/kimbring2/gym-stratego/tree/main/gym_stratego/envs/brains) in the original code.
+First, I trained the agent against the [built-in AI​](https://github.com/kimbring2/gym-stratego/tree/main/gym_stratego/envs/brains) of the original code. Note that, 
 ## Network architecture
 <img src="images/network_architecture.png" width="700">
 
+## Training result
+Because I am experimenting with AI that is as easy as possible and increasing the level of difficulty one by one, it cannot be said that it shows the same performance as DeepMind's original paper.
+
+For example, in the case of AI where the location of each unit is fixed, it was confirmed that learning was successful even without using DeepNash.
+<img src="images/training_result" width="700">
